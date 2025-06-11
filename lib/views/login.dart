@@ -1,3 +1,5 @@
+import 'package:dsc_mobile_rework/engine/network/request_handler.dart';
+import 'package:dsc_mobile_rework/views/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:url_launcher/link.dart';
@@ -7,6 +9,9 @@ class Login extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final RequestHandler requestHandler = RequestHandler();
+    String email = "";
+    String password = "";
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -19,19 +24,18 @@ class Login extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                   child: TextField(
-                    //controller: TextEditingController(text: ""),
-                    //keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    controller: TextEditingController(text: email),
                     decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Enter your email"),
-                    //onChanged: (value) => openReport.latitude = value,
+                    onChanged: (value) => email = value,
                   ),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                   child: TextField(
-                    //controller: TextEditingController(text: ""),
-                    //keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    controller: TextEditingController(text: password),
                     decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Enter your password"),
-                    //onChanged: (value) => openReport.latitude = value,
+                    onChanged: (value) => password = value,
+                    obscureText: true,
                   ),
                 ),
                 Link(
@@ -44,11 +48,19 @@ class Login extends StatelessWidget {
                       ),
                 ),
                 PlatformElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    await requestHandler.requestSession(email, password);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const Home()),
+                    );
+                  },
                   child: const Text("Login"),
                 ),
                 PlatformElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    await requestHandler.requestNewUser(email, password);
+                  },
                   child: const Text("I'm a New User"),
                 ),
           ]),

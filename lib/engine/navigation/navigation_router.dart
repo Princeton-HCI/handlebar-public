@@ -1,4 +1,3 @@
-import 'package:dsc_mobile_rework/engine/auth/auth_provider.dart';
 import 'package:dsc_mobile_rework/engine/storage/device/secure_storage.dart';
 import 'package:dsc_mobile_rework/views/login.dart';
 import 'package:flutter/material.dart';
