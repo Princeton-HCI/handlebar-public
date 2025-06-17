@@ -2,7 +2,7 @@
 
 Driver's Seat API user interface for iOS and Android devices
 
-## Installation from Git
+## Plugin installation from Git
 
 To use the latest version from the main branch, add this to your package's `pubspec.yaml` file:
 
