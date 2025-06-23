@@ -1,7 +1,7 @@
 import 'package:dsc_mobile_rework/engine/network/request_handler.dart';
-import 'package:dsc_mobile_rework/views/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/link.dart';
 
 class Login extends StatelessWidget {
@@ -50,10 +50,9 @@ class Login extends StatelessWidget {
                 PlatformElevatedButton(
                   onPressed: () async {
                     await requestHandler.requestSession(email, password);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const Home()),
-                    );
+                    if (context.mounted) {
+                      context.go('/'); // Navigate to home using GoRouter
+                    }
                   },
                   child: const Text("Login"),
                 ),
