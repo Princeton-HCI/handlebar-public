@@ -2,6 +2,7 @@ import 'package:dsc_mobile_rework/engine/storage/device/secure_storage.dart';
 import 'package:dsc_mobile_rework/views/login.dart';
 import 'package:dsc_mobile_rework/views/home.dart';
 import 'package:dsc_mobile_rework/views/study_consent.dart';
+import 'package:dsc_mobile_rework/views/crepe_events_test.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -39,6 +40,12 @@ GoRouter navigationRouter() {
         path: '/study-consent',
         builder: (BuildContext context, GoRouterState state) {
           return const StudyConsent();
+        },
+      ),
+      GoRoute(
+        path: '/crepe-events-test',
+        builder: (BuildContext context, GoRouterState state) {
+          return const CrepeEventsTest();
         },
       ),
     ],

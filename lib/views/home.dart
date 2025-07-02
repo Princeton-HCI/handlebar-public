@@ -54,6 +54,13 @@ class _HomeState extends State<Home> {
                 child: const Text('Research Study Participation'),
               ),
               const SizedBox(height: 16),
+              PlatformElevatedButton(
+                onPressed: () {
+                  context.go('/crepe-events-test');
+                },
+                child: const Text('Test CrepeEvents'),
+              ),
+              const SizedBox(height: 16),
               PlatformTextButton(
                 onPressed: () {
                   // TODO: Add logout functionality
