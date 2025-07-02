@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
-import 'package:dsc_mobile_rework/engine/storage/device/secure_storage.dart';
+import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
