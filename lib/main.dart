@@ -1,8 +1,7 @@
-import 'package:dsc_mobile_rework/engine/navigation/navigation_router.dart';
+import 'package:dsc_mobile_rework/navigation/navigation_router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:provider/provider.dart';
 
 void main() {
   runApp(const DriversSeatCooperativeApp());

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dsc_mobile_rework/engine/storage/device/secure_storage.dart';
+import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
 
 class StudyConsent extends StatefulWidget {
   const StudyConsent({super.key});
