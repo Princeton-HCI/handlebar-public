@@ -33,7 +33,7 @@ dependencies:
 
   crepe_plugin:
     git:
-      url: git@github.com:Princeton-HCI/crepe-flutter-plugin.git
+      url: https://github.com/Princeton-HCI/crepe-flutter-plugin.git
       ref: main
 
   # The following adds the Cupertino Icons font to your application.

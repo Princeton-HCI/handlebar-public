@@ -15,53 +15,58 @@ class Login extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(children: [
+            Image.asset('assets/logo-small.png'),
+            PlatformText("Welcome back!"),
+            PlatformText("Log In"),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: PlatformTextField(
+                controller: TextEditingController(text: email),
+                hintText: "Enter your email",
+                onChanged: (value) => email = value,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: PlatformTextField(
+                controller: TextEditingController(text: password),
+                hintText: "Enter your password",
+                onChanged: (value) => password = value,
+                obscureText: true,
+              ),
+            ),
+            PlatformElevatedButton(
+              onPressed: () async {
+                await requestHandler.requestSession(email, password);
+                if (context.mounted) {
+                  context.go('/'); // Navigate to home using GoRouter
+                }
+              },
+              child: const Text("Login"),
+            ),
+            Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Image.asset('assets/logo-small.png'),
-                const Text("Log In"),
-                const Text("Welcome back!"),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  child: TextField(
-                    controller: TextEditingController(text: email),
-                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Enter your email"),
-                    onChanged: (value) => email = value,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  child: TextField(
-                    controller: TextEditingController(text: password),
-                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Enter your password"),
-                    onChanged: (value) => password = value,
-                    obscureText: true,
-                  ),
-                ),
                 Link(
-                  uri: Uri.parse(
-                      'https://www.driversseat.co/contact'),
+                  uri: Uri.parse('https://www.driversseat.co/contact'),
                   builder: (BuildContext context, FollowLink? followLink) =>
-                      PlatformElevatedButton(
-                        onPressed: followLink,
-                        child: const Text('Forgot Password?'),
-                      ),
+                      PlatformTextButton(
+                    onPressed: followLink,
+                    child: const Text('Forgot Password?'),
+                  ),
                 ),
-                PlatformElevatedButton(
-                  onPressed: () async {
-                    await requestHandler.requestSession(email, password);
-                    if (context.mounted) {
-                      context.go('/'); // Navigate to home using GoRouter
-                    }
-                  },
-                  child: const Text("Login"),
-                ),
-                PlatformElevatedButton(
+                PlatformTextButton(
                   onPressed: () async {
                     await requestHandler.requestNewUser(email, password);
                   },
                   child: const Text("I'm a New User"),
                 ),
+              ],
+            ),
           ]),
         ),
       ),
