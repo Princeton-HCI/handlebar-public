@@ -1,7 +1,8 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
+import 'package:dsc_mobile_rework/network/request_handler.dart';
 
 class StudyConsent extends StatefulWidget {
   const StudyConsent({super.key});
@@ -11,46 +12,101 @@ class StudyConsent extends StatefulWidget {
 }
 
 class _StudyConsentState extends State<StudyConsent> {
-  final SecureStorage localStorage = SecureStorage();
+  final RequestHandler requestHandler = RequestHandler();
   bool isOptedIn = false;
   bool isLoading = true;
+  bool isUpdating = false;
+  int? currentTermsId;
 
   @override
   void initState() {
     super.initState();
-    _loadOptInStatus();
+    _loadCurrentTermsStatus();
   }
 
-  Future<void> _loadOptInStatus() async {
-    try {
-      String? optInValue = await localStorage.readStorageData("isStudyOptedIn");
-      setState(() {
-        isOptedIn = optInValue == "true";
-        isLoading = false;
-      });
-    } catch (e) {
+  Future<void> _loadCurrentTermsStatus() async {
+    if (!requestHandler.isAuthenticated()) {
       setState(() {
         isOptedIn = false;
+        isLoading = false;
+        currentTermsId = null;
+      });
+      return;
+    }
+
+    try {
+      final result = await requestHandler.checkCurrentTerms();
+      
+      if (result.success) {
+        setState(() {
+          isOptedIn = result.hasAcceptedCurrentTerms;
+          currentTermsId = result.currentTermsId;
+          isLoading = false;
+        });
+      } else {
+        log("Error checking terms status: ${result.error}", name: 'StudyConsent');
+        setState(() {
+          isOptedIn = false;
+          currentTermsId = null;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      log("Error loading terms status", error: e, name: 'StudyConsent');
+      setState(() {
+        isOptedIn = false;
+        currentTermsId = null;
         isLoading = false;
       });
     }
   }
 
-  Future<void> _updateOptInStatus(bool newValue) async {
-    setState(() {
-      isOptedIn = newValue;
-    });
-    await localStorage.writeStorageData("isStudyOptedIn", newValue.toString());
+  Future<void> _acceptCurrentTerms() async {
+    if (isUpdating || currentTermsId == null) return;
     
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(newValue 
-            ? 'You have opted into the research study' 
-            : 'You have opted out of the research study'),
-          backgroundColor: newValue ? Colors.green : Colors.orange,
-        ),
-      );
+    setState(() {
+      isUpdating = true;
+    });
+
+    try {
+      final result = await requestHandler.acceptTerms(currentTermsId!);
+      
+      if (result.success) {
+        setState(() {
+          isOptedIn = true;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You have successfully opted into the research study'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error accepting terms: ${result.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error accepting terms: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        isUpdating = false;
+      });
     }
   }
 
@@ -66,6 +122,10 @@ class _StudyConsentState extends State<StudyConsent> {
       appBar: AppBar(
         title: const Text('Research Study Participation'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -146,7 +206,7 @@ class _StudyConsentState extends State<StudyConsent> {
               ),
             ),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Opt-in/Opt-out Section
             Card(
@@ -183,8 +243,21 @@ class _StudyConsentState extends State<StudyConsent> {
                       SizedBox(
                         width: double.infinity,
                         child: PlatformElevatedButton(
-                          onPressed: () => _updateOptInStatus(true),
-                          child: const Text('Yes, I want to participate'),
+                          onPressed: isUpdating ? null : () => _acceptCurrentTerms(),
+                          child: isUpdating 
+                              ? const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text('Accepting Terms...'),
+                                  ],
+                                )
+                              : const Text('Yes, I want to participate'),
                         ),
                       ),
                     ] else ...[
@@ -192,30 +265,9 @@ class _StudyConsentState extends State<StudyConsent> {
                         'Thank you for participating in our research study! Your contribution helps improve mobile app accessibility.',
                         style: TextStyle(fontSize: 16, color: Colors.green),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: PlatformElevatedButton(
-                          onPressed: () => _updateOptInStatus(false),
-                          child: const Text('Opt Out of Study'),
-                        ),
-                      ),
                     ],
                   ],
                 ),
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Back button
-            SizedBox(
-              width: double.infinity,
-              child: PlatformTextButton(
-                onPressed: () {
-                  context.go('/');
-                },
-                child: const Text('Back to Home'),
               ),
             ),
           ],

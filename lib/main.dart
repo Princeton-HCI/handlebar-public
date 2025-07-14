@@ -1,9 +1,17 @@
 import 'package:dsc_mobile_rework/navigation/navigation_router.dart';
+import 'package:dsc_mobile_rework/network/request_handler.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize RequestHandler to load stored authentication state
+  final requestHandler = RequestHandler();
+  await requestHandler.initialize();
+  
   runApp(const DriversSeatCooperativeApp());
 }
 

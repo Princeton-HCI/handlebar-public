@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:dsc_mobile_rework/network/request_handler.dart';
+import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
+import 'package:go_router/go_router.dart';
 
 class CrepeEventsTest extends StatefulWidget {
   const CrepeEventsTest({super.key});
@@ -13,26 +15,23 @@ class CrepeEventsTest extends StatefulWidget {
 
 class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingObserver {
   final _crepePlugin = CrepePlugin();
+  final _requestHandler = RequestHandler();
+  final _secureStorage = SecureStorage();
   String _testResult = 'No test performed yet';
   String _accessibilityStatus = 'Unknown';
-  String _authStatus = 'Not authenticated';
+  String _authStatus = 'Checking authentication...';
   bool _isLoading = false;
   bool _isServiceEnabled = false;
-  bool _isStaging = false;
   bool _isCheckingStatus = false;
-  bool _isAuthenticating = false;
-  String? _authToken;
-  bool _termsAccepted = false;
-
-  // Test user credentials
-  final String _testEmail = 'test@example.com';
-  final String _testPassword = 'password123';
+  bool _isCheckingAuth = false;
+  String? _userEmail;
+  bool _isAuthenticated = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkAccessibilityStatus();
+    _initializeAuthAndAccessibility();
   }
 
   @override
@@ -47,6 +46,36 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     // When app resumes from background (e.g., returning from settings)
     if (state == AppLifecycleState.resumed) {
       _checkAccessibilityStatus();
+    }
+  }
+
+  Future<void> _initializeAuthAndAccessibility() async {
+    await _checkAuthenticationStatus();
+    await _checkAccessibilityStatus();
+  }
+
+  Future<void> _checkAuthenticationStatus() async {
+    setState(() {
+      _isCheckingAuth = true;
+    });
+
+    try {
+      final isAuthenticated = _requestHandler.isAuthenticated();
+      _userEmail = _secureStorage.email;
+      
+      setState(() {
+        _isAuthenticated = isAuthenticated;
+        _authStatus = isAuthenticated 
+            ? 'Authenticated as: $_userEmail'
+            : 'Not authenticated. Please log in through the main app.';
+        _isCheckingAuth = false;
+      });
+    } catch (e) {
+      setState(() {
+        _authStatus = 'Error checking authentication: $e';
+        _isAuthenticated = false;
+        _isCheckingAuth = false;
+      });
     }
   }
 
@@ -83,116 +112,6 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
       Future.delayed(const Duration(seconds: 1), _checkAccessibilityStatus);
     } catch (e) {
       setState(() => _accessibilityStatus = 'Error requesting permission: $e');
-    }
-  }
-
-  Future<void> _authenticateUser() async {
-    setState(() {
-      _isAuthenticating = true;
-      _authStatus = 'Creating test user...';
-    });
-
-    try {
-      final baseUrl = _isStaging 
-          ? 'https://dsc-api-staging-23350212163.us-central1.run.app'
-          : 'https://dsc-api-service-23350212163.us-central1.run.app';
-
-      // Step 1: Create test user
-      try {
-        final createUserResponse = await http.post(
-          Uri.parse('$baseUrl/api/users'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({
-            'user': {
-              'email': _testEmail,
-              'password': _testPassword,
-              'first_name': 'Test',
-              'last_name': 'User',
-              'timezone': 'America/Los_Angeles'
-            }
-          }),
-        );
-        
-        if (createUserResponse.statusCode == 200 || createUserResponse.statusCode == 422) {
-          // 422 might mean user already exists, which is fine
-          setState(() => _authStatus = 'Logging in...');
-        } else {
-          throw Exception('Failed to create user: ${createUserResponse.statusCode}');
-        }
-      } catch (e) {
-        // User might already exist, continue with login
-        setState(() => _authStatus = 'User exists, logging in...');
-      }
-
-      // Step 2: Login to get auth token
-      final loginResponse = await http.post(
-        Uri.parse('$baseUrl/api/sessions'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'session': {
-            'email': _testEmail,
-            'password': _testPassword
-          }
-        }),
-      );
-
-      if (loginResponse.statusCode == 200) {
-        print('Login response headers: ${loginResponse.headers}'); // Debug log
-        
-        // Get token from authorization header
-        String? token = loginResponse.headers['authorization'];
-        if (token != null && token.startsWith('Bearer ')) {
-          token = token.substring(7); // Remove 'Bearer ' prefix
-        }
-        
-        if (token == null || token.isEmpty) {
-          throw Exception('No authorization token found in headers: ${loginResponse.headers}');
-        }
-        
-        _authToken = token;
-        if (_authToken == null) {
-          throw Exception('No authorization token found in headers: ${loginResponse.headers}');
-        } else {
-          print('We have a token'); // Debug log
-        }
-        setState(() => _authStatus = 'Accepting terms...');
-
-        // Step 3: Accept terms
-        final termsResponse = await http.post(
-          Uri.parse('$baseUrl/api/accepted_terms'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_authToken',
-          },
-          body: json.encode({
-            'accepted_terms': {
-              'terms_id': 2
-            }
-          }),
-        );
-
-        print('Terms response status: ${termsResponse.statusCode}'); // Debug log
-        print('Terms response body: ${termsResponse.body}'); // Debug log
-
-        if (termsResponse.statusCode == 200 || termsResponse.statusCode == 201 || termsResponse.statusCode == 422) {
-          // 422 might mean terms already accepted
-          setState(() {
-            _termsAccepted = true;
-            _authStatus = 'Authenticated & Terms Accepted';
-          });
-        } else {
-          throw Exception('Failed to accept terms: ${termsResponse.statusCode} - ${termsResponse.body}');
-        }
-      } else {
-        final loginError = loginResponse.body;
-        throw Exception('Login failed: ${loginResponse.statusCode} - $loginError');
-      }
-
-    } catch (e) {
-      print('Auth error: $e'); // Debug log
-      setState(() => _authStatus = 'Auth failed: $e');
-    } finally {
-      setState(() => _isAuthenticating = false);
     }
   }
 
@@ -235,7 +154,8 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
         'metadata': {
           'pluginVersion': '1.0.0',
           'testMode': true,
-          'environment': _isStaging ? 'staging' : 'production'
+          'environment': RequestHandler.currentEnvironment.toLowerCase(),
+          'userEmail': _userEmail ?? 'unknown'
         }
       };
 
@@ -250,49 +170,35 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
         'error': e.toString(),
         'metadata': {
           'testMode': true,
-          'environment': _isStaging ? 'staging' : 'production'
+          'environment': RequestHandler.currentEnvironment.toLowerCase(),
+          'userEmail': _userEmail ?? 'unknown'
         }
       };
     }
   }
 
   Future<void> _sendCrepeEventToBackend(Map<String, dynamic> crepeEvent) async {
-    if (_authToken == null) {
-      setState(() => _testResult = 'ERROR: Not authenticated. Please authenticate first.');
+    if (!_isAuthenticated) {
+      setState(() => _testResult = 'ERROR: Not authenticated. Please log in through the main app.');
       return;
     }
 
     try {
-      final url = _isStaging 
-          ? 'https://dsc-api-staging-23350212163.us-central1.run.app'
-          : 'https://dsc-api-service-23350212163.us-central1.run.app';
-      
-      final uri = Uri.parse('$url/api/crepe/event');
-      
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_authToken',
-        },
-        body: json.encode({
-          'data_field_id': 3,
-          'collected_at': DateTime.now().toIso8601String(),
-          'content': json.encode(crepeEvent),
-          'notification': 'Test CrepeEvent from Flutter app'
-        }),
+      final result = await _requestHandler.sendCrepeEvent(
+        crepeEvent,
+        dataFieldId: 3
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (result.success) {
         setState(() {
           _testResult = 'SUCCESS: CrepeEvent sent to backend!\n'
-                      'Status: ${response.statusCode}\n'
-                      'Response: ${response.body}';
+                      'Environment: ${RequestHandler.currentEnvironment}\n'
+                      'User: $_userEmail\n'
+                      'Response: ${result.userData?.toString() ?? 'No response data'}';
         });
       } else {
         setState(() {
-          _testResult = 'FAILED: HTTP ${response.statusCode}\n'
-                      'Response: ${response.body}';
+          _testResult = 'FAILED: ${result.error ?? 'Unknown error'}';
         });
       }
     } catch (e) {
@@ -382,24 +288,32 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
       appBar: PlatformAppBar(
         title: const Text('CrepeEvents Test'),
         backgroundColor: Colors.green[600],
+        leading: PlatformIconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Authentication Card
+            // Authentication Status Card
             _buildCard(
-              title: 'Authentication',
-              statusText: _authToken != null && _termsAccepted ? 'Ready' : 'Required',
-              statusColor: _authToken != null && _termsAccepted ? Colors.green : Colors.red,
+              title: 'Authentication Status',
+              statusText: _isAuthenticated ? 'Authenticated' : 'Not Authenticated',
+              statusColor: _isAuthenticated ? Colors.green : Colors.red,
               children: [
+                if (_userEmail != null) ...[
+                  Text(
+                    'Logged in as: $_userEmail',
+                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Text(
-                  'Test user: $_testEmail',
-                  style: TextStyle(color: Colors.grey[600], fontFamily: 'monospace'),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Authentication is required to send CrepeEvents to the backend.',
+                  _isAuthenticated 
+                      ? 'Using existing user session for CrepeEvents testing.'
+                      : 'Please log in through the main app to test CrepeEvents.',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 12),
@@ -407,8 +321,8 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                   children: [
                     Expanded(
                       child: PlatformElevatedButton(
-                        onPressed: _isAuthenticating ? null : _authenticateUser,
-                        child: _isAuthenticating 
+                        onPressed: _isCheckingAuth ? null : _checkAuthenticationStatus,
+                        child: _isCheckingAuth 
                             ? const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -418,10 +332,10 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   ),
                                   SizedBox(width: 8),
-                                  Text('Authenticating...'),
+                                  Text('Checking...'),
                                 ],
                               )
-                            : const Text('Authenticate Test User'),
+                            : const Text('Refresh Auth Status'),
                       ),
                     ),
                   ],
@@ -430,20 +344,31 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: _isAuthenticated ? Colors.green[50] : Colors.red[50],
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _isAuthenticated ? Colors.green[200]! : Colors.red[200]!),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Auth Status:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(
+                            _isAuthenticated ? Icons.check_circle : Icons.warning,
+                            color: _isAuthenticated ? Colors.green : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Auth Status:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _authStatus,
-                        style: const TextStyle(fontFamily: 'monospace'),
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ],
                   ),
@@ -512,31 +437,44 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
               ],
             ),
 
-            // Environment Selection Card
+            // Environment Info Card
             _buildCard(
-              title: 'Environment',
-              statusText: _isStaging ? 'Staging' : 'Production',
-              statusColor: _isStaging ? Colors.orange : Colors.blue,
+              title: 'Environment Info',
+              statusText: RequestHandler.currentEnvironment,
+              statusColor: RequestHandler.currentEnvironment == 'Production' ? Colors.blue : Colors.orange,
               children: [
-                Row(
-                  children: [
-                    const Text('API Environment: '),
-                    const SizedBox(width: 8),
-                    const Text('Prod'),
-                    Switch(
-                      value: _isStaging,
-                      onChanged: (value) {
-                        setState(() {
-                          _isStaging = value;
-                          // Reset auth when changing environments
-                          _authToken = null;
-                          _termsAccepted = false;
-                          _authStatus = 'Not authenticated';
-                        });
-                      },
-                    ),
-                    const Text('Staging'),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.cloud, color: Colors.blue[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'API Environment: ${RequestHandler.currentEnvironment}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Base URL: ${RequestHandler.apiBaseUrl}',
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Endpoint: ${RequestHandler.apiBaseUrl}/api/crepe/event',
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -546,12 +484,12 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
               title: 'CrepeEvents Test',
               children: [
                 Text(
-                  'This will generate a dummy CrepeEvent and send it to the backend API.',
+                  'This will generate a dummy CrepeEvent and send it to the backend using your current login session.',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
                 PlatformElevatedButton(
-                  onPressed: (_isLoading || _authToken == null) ? null : _testCrepeEvents,
+                  onPressed: (_isLoading || !_isAuthenticated) ? null : _testCrepeEvents,
                   child: _isLoading 
                       ? const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -565,7 +503,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                             Text('Testing...'),
                           ],
                         )
-                      : Text(_authToken == null ? 'Authenticate First' : 'Send Test CrepeEvent'),
+                      : Text(!_isAuthenticated ? 'Log In Required' : 'Send Test CrepeEvent'),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -585,43 +523,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                       const SizedBox(height: 8),
                       Text(
                         _testResult,
-                        style: const TextStyle(fontFamily: 'monospace'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // API Info Card
-            _buildCard(
-              title: 'API Information',
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'CrepeEvents Endpoint:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _isStaging 
-                            ? 'https://dsc-api-staging-23350212163.us-central1.run.app/api/crepe/event'
-                            : 'https://dsc-api-service-23350212163.us-central1.run.app/api/crepe/event',
                         style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'This endpoint receives authenticated CrepeEvent data from the plugin.',
-                        style: TextStyle(fontSize: 12),
                       ),
                     ],
                   ),

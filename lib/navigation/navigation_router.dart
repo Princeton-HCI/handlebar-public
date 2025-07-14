@@ -1,4 +1,5 @@
 import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
+import 'package:dsc_mobile_rework/network/request_handler.dart';
 import 'package:dsc_mobile_rework/views/login.dart';
 import 'package:dsc_mobile_rework/views/home.dart';
 import 'package:dsc_mobile_rework/views/study_consent.dart';
@@ -10,24 +11,28 @@ import 'package:go_router/go_router.dart';
 GoRouter navigationRouter() {
   return GoRouter(
     redirect: (context, state) {
-      final isAuthenticated = true; // Mock authentication for now
-      final localStorage = SecureStorage();
+      final requestHandler = RequestHandler();
       
+      // Check if user is authenticated (RequestHandler should already be initialized)
+      final isAuthenticated = requestHandler.isAuthenticated();
+      
+      // If not authenticated and not already on login page, redirect to login
       if (!isAuthenticated && state.fullPath != '/login') {
-        if (localStorage.refreshToken.isNotEmpty) {
-          return null;
-        }
-        else {
-          return '/login';
-        }
+        return '/login';
       }
-      return null; // Allow navigation to any route when authenticated
+      
+      // If authenticated and on login page, redirect to home
+      if (isAuthenticated && state.fullPath == '/login') {
+        return '/';
+      }
+      
+      return null; // Allow navigation to requested route
     },
     routes: <RouteBase>[
       GoRoute(
         path: '/',
         builder: (BuildContext context, GoRouterState state) {
-          return const Home(); // Fixed: Home screen instead of Login
+          return const Home();
         },
       ),
       GoRoute(
