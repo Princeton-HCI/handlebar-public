@@ -1,8 +1,13 @@
-# dsc_mobile_rework
+# Handlebar
 
 Driver's Seat API user interface for iOS and Android devices
 
-## Plugin installation from Git
+## Development
+
+### keystoreProperties
+
+
+### Plugin installation from Git
 
 To use the latest version from the main branch, add this to your package's `pubspec.yaml` file:
 

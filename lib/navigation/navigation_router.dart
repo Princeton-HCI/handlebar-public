@@ -1,9 +1,9 @@
-import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
-import 'package:dsc_mobile_rework/network/request_handler.dart';
-import 'package:dsc_mobile_rework/views/login.dart';
-import 'package:dsc_mobile_rework/views/home.dart';
-import 'package:dsc_mobile_rework/views/study_consent.dart';
-import 'package:dsc_mobile_rework/views/crepe_events_test.dart';
+import 'package:handlebar/storage/device/secure_storage.dart';
+import 'package:handlebar/network/request_handler.dart';
+import 'package:handlebar/views/login.dart';
+import 'package:handlebar/views/home.dart';
+import 'package:handlebar/views/study_consent.dart';
+import 'package:handlebar/views/crepe_events_test.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

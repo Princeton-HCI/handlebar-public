@@ -2,7 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dsc_mobile_rework/network/request_handler.dart';
+import 'package:handlebar/network/request_handler.dart';
 
 class StudyConsent extends StatefulWidget {
   const StudyConsent({super.key});
@@ -143,11 +143,13 @@ class _StudyConsentState extends State<StudyConsent> {
                       children: [
                         Icon(Icons.science, color: Colors.blue),
                         SizedBox(width: 8),
-                        Text(
-                          'About This Research Study',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            'About This Research Study',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],

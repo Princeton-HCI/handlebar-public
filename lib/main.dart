@@ -1,5 +1,5 @@
-import 'package:dsc_mobile_rework/navigation/navigation_router.dart';
-import 'package:dsc_mobile_rework/network/request_handler.dart';
+import 'package:handlebar/navigation/navigation_router.dart';
+import 'package:handlebar/network/request_handler.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -12,18 +12,18 @@ void main() async {
   final requestHandler = RequestHandler();
   await requestHandler.initialize();
   
-  runApp(const DriversSeatCooperativeApp());
+  runApp(const HandlebarApp());
 }
 
 
-class DriversSeatCooperativeApp extends StatefulWidget {
-  const DriversSeatCooperativeApp({super.key});
+class HandlebarApp extends StatefulWidget {
+  const HandlebarApp({super.key});
 
   @override
-  State<DriversSeatCooperativeApp> createState() => _DriversSeatCooperativeAppState();
+  State<HandlebarApp> createState() => _HandlebarAppState();
 }
 
-class _DriversSeatCooperativeAppState extends State<DriversSeatCooperativeApp> {
+class _HandlebarAppState extends State<HandlebarApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -37,7 +37,7 @@ class _DriversSeatCooperativeAppState extends State<DriversSeatCooperativeApp> {
               DefaultWidgetsLocalizations.delegate,
               DefaultCupertinoLocalizations.delegate,
             ],
-            title: 'DSC Mobile Flutter Demo',
+            title: 'Handlebar',
             routerConfig: navRouter,
           ),
       ),

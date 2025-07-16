@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'dart:convert';
-import 'package:dsc_mobile_rework/network/request_handler.dart';
-import 'package:dsc_mobile_rework/storage/device/secure_storage.dart';
+import 'package:handlebar/network/request_handler.dart';
+import 'package:handlebar/storage/device/secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 class CrepeEventsTest extends StatefulWidget {
@@ -125,7 +125,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
         'eventId': 'test-event-${DateTime.now().millisecondsSinceEpoch}',
         'timestamp': DateTime.now().toIso8601String(),
         'eventType': 'accessibility_event',
-        'appPackage': 'co.wao.driversseat.app.dsc_mobile_rework',
+        'appPackage': 'co.wao.handlebar',
         'activityName': 'CrepeEventsTest',
         'eventData': {
           'accessibilityData': accessibilityData ?? 'No accessibility data available',
@@ -166,7 +166,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
         'eventId': 'dummy-event-${DateTime.now().millisecondsSinceEpoch}',
         'timestamp': DateTime.now().toIso8601String(),
         'eventType': 'test_event',
-        'appPackage': 'co.wao.driversseat.app.dsc_mobile_rework',
+        'appPackage': 'co.wao.handlebar',
         'error': e.toString(),
         'metadata': {
           'testMode': true,

@@ -1,4 +1,4 @@
-package co.wao.driversseat.app.dsc_mobile_rework
+package co.wao.handlebar
 
 import io.flutter.embedding.android.FlutterActivity
 

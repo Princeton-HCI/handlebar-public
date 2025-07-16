@@ -1,4 +1,4 @@
-import 'package:dsc_mobile_rework/network/request_handler.dart';
+import 'package:handlebar/network/request_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -201,7 +201,7 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Welcome to DSC Mobile!',
+                'Welcome to Handlebar!',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
