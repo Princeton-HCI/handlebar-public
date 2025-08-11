@@ -30,9 +30,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  crepe_plugin:
-    url: https://github.com/Princeton-HCI/crepe-flutter-plugin.git
+    
+  crepe_plugin: #path: path/to/local/plugin
+    git:
+      url: https://github.com/Princeton-HCI/crepe-flutter-plugin.git #git@github.com:Princeton-HCI/crepe-flutter-plugin.git #for ssh option
+      ref: main
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

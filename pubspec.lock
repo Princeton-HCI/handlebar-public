@@ -44,9 +44,11 @@ packages:
   crepe_plugin:
     dependency: "direct main"
     description:
-      path: "../crepe-flutter-plugin"
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: da1f7440b72f5071661dc6fab129f48aababdaec
+      url: "https://github.com/Princeton-HCI/crepe-flutter-plugin.git"
+    source: git
     version: "1.0.0"
   cupertino_icons:
     dependency: "direct main"
