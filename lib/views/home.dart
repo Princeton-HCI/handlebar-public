@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:handlebar/services/collector_service.dart';
+import 'package:crepe_plugin/crepe_plugin.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -152,6 +154,94 @@ class _HomeState extends State<Home> {
     );
   }
 
+  void _testCollectors() async {
+    final collectorService = CollectorService();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Testing collectors...'),
+            ],
+          ),
+        );
+      },
+    );
+    
+    final result = await collectorService.testActiveCollectors();
+    
+    // Hide loading dialog
+    Navigator.of(context).pop();
+    
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Successfully tested collectors: ${result.message}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Failed to test collectors: ${result.message}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  void _showCollectorStatus() async {
+    final collectorService = CollectorService();
+    
+    // Check if continuous monitoring is enabled
+    bool isEnabled = false;
+    try {
+      final crepePlugin = CrepePlugin();
+      isEnabled = await crepePlugin.isContinuousMonitoringEnabled();
+    } catch (e) {
+      // Handle error silently
+    }
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('🎯 Collector Status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Service Initialized: ${collectorService.isInitialized ? "✅" : "❌"}'),
+              const SizedBox(height: 8),
+              Text('Continuous Monitoring: ${isEnabled ? "🔄 ACTIVE" : "⏸️ INACTIVE"}'),
+              const SizedBox(height: 8),
+              Text('Active Collectors: ${collectorService.activeCollectorResponse != null ? "📊 LOADED (${collectorService.activeCollectorResponse!.collectors.length})" : "❌ NONE"}'),
+              const SizedBox(height: 16),
+              const Text(
+                'When continuous monitoring is active, the app will automatically detect when you navigate to collector target screens (like Maps) and send events to the backend.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -241,6 +331,21 @@ class _HomeState extends State<Home> {
                   context.go('/crepe-events-test');
                 },
                 child: const Text('Test CrepeEvents'),
+              ),
+              const SizedBox(height: 16),
+              PlatformElevatedButton(
+                onPressed: _testCollectors,
+                child: const Text('Test Active Collectors'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _showCollectorStatus,
+                icon: const Icon(Icons.info_outline),
+                label: const Text('Collector Status'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue),
+                ),
               ),
               const SizedBox(height: 32),
               // Logout button

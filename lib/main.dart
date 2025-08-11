@@ -1,5 +1,6 @@
 import 'package:handlebar/navigation/navigation_router.dart';
 import 'package:handlebar/network/request_handler.dart';
+import 'package:handlebar/services/collector_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -39,6 +40,10 @@ class _HandlebarAppState extends State<HandlebarApp> {
             ],
             title: 'Handlebar',
             routerConfig: navRouter,
+            material: (_, __) => MaterialAppRouterData(
+              scaffoldMessengerKey: CollectorService.scaffoldMessengerKey,
+            ),
+            cupertino: (_, __) => CupertinoAppRouterData(),
           ),
       ),
         settings: PlatformSettingsData(iosUsesMaterialWidgets: true),

@@ -10,6 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:handlebar/models/Result.dart';
+import 'package:handlebar/models/CollectorResponse.dart';
+import 'package:handlebar/models/CrepeEvent.dart';
 
 class RequestHandler {
   final secureStorage = SecureStorage();
@@ -375,7 +378,7 @@ class RequestHandler {
   }
 
   // Send CrepeEvent to backend
-  Future<AuthResult> sendCrepeEvent(Map<String, dynamic> crepeEvent, {int dataFieldId = 3}) async {
+  Future<AuthResult> sendCrepeEvent(CrepeEvent crepeEvent) async {
     try {
       if (!isAuthenticated()) {
         return AuthResult(success: false, error: "User not authenticated");
@@ -384,11 +387,7 @@ class RequestHandler {
       final response = await http.post(
         Uri.parse('${apiBaseUrl}/api/crepe/event'),
         headers: requestHeaders,
-        body: jsonEncode({
-          'data_field_id': dataFieldId,
-          'collected_at': DateTime.now().toIso8601String(),
-          'content': jsonEncode(crepeEvent)
-        }),
+        body: jsonEncode(crepeEvent.toJson()),
       );
 
       // Check for 401 unauthorized
@@ -404,6 +403,42 @@ class RequestHandler {
       return AuthResult(success: false, error: error);
     } catch (e) {
       return AuthResult(success: false, error: "Network error: ${e.toString()}");
+    }
+  }
+
+  // This is here in case we want to put getting the active collectors behind authentication
+  Future<Result<CollectorResponse, ApiError>> getActiveCollectors() async {
+    try {
+
+      final response = await http.get(
+        Uri.parse('${apiBaseUrl}/api/crepe/collector'),
+        headers: requestHeaders,
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        if (responseData['data'] != null) {
+          final collectorResponse = CollectorResponse.fromJson(responseData);
+          return Success(collectorResponse);
+        } else {
+          return Failure(ApiError(
+            message: "Invalid response format - no data field",
+            statusCode: response.statusCode,
+          ));
+        }
+      }
+
+      final error = _extractErrorMessage(response);
+      return Failure(ApiError(
+        message: error,
+        statusCode: response.statusCode,
+      ));
+    } catch (e) {
+      return Failure(ApiError(
+        message: "Network error: ${e.toString()}",
+        originalError: e,
+      ));
     }
   }
 }
@@ -432,3 +467,4 @@ class TermsResult {
     this.currentTermsId,
   });
 }
+

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:handlebar/network/request_handler.dart';
 import 'package:handlebar/storage/device/secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:handlebar/models/CrepeEvent.dart';
 
 class CrepeEventsTest extends StatefulWidget {
   const CrepeEventsTest({super.key});
@@ -177,17 +178,19 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     }
   }
 
-  Future<void> _sendCrepeEventToBackend(Map<String, dynamic> crepeEvent) async {
+  Future<void> _sendCrepeEventToBackend(Map<String, dynamic> crepeEventData) async {
     if (!_isAuthenticated) {
       setState(() => _testResult = 'ERROR: Not authenticated. Please log in through the main app.');
       return;
     }
 
     try {
-      final result = await _requestHandler.sendCrepeEvent(
-        crepeEvent,
-        dataFieldId: 3
+      final crepeEvent = CrepeEvent(
+        dataFieldId: 3,
+        collectedAt: DateTime.now(),
+        content: jsonEncode(crepeEventData),
       );
+      final result = await _requestHandler.sendCrepeEvent(crepeEvent);
 
       if (result.success) {
         setState(() {
