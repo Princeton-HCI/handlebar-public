@@ -4,6 +4,8 @@ Driver's Seat API user interface for iOS and Android devices
 
 ## Development
 
+Run with `flutter run`
+
 ### keystoreProperties
 
 

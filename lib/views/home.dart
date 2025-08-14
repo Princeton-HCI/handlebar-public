@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handlebar/services/collector_service.dart';
+import 'package:handlebar/services/ui_snapshot_recording_service.dart';
+import 'package:handlebar/services/notification_service.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
 
 class Home extends StatefulWidget {
@@ -15,6 +17,24 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final RequestHandler _requestHandler = RequestHandler();
+  final UiSnapshotRecordingService _recordingService = UiSnapshotRecordingService();
+
+  Future<void> _enableAccessibilityService() async {
+    try {
+      final crepePlugin = CrepePlugin();
+      final isEnabled = await crepePlugin.isAccessibilityServiceEnabled();
+      
+      if (isEnabled) {
+        // Service is already enabled
+        NotificationService().showSuccess('✅ Accessibility service is already enabled');
+      } else {
+        // Open accessibility settings
+        await crepePlugin.requestAccessibilityPermission();
+      }
+    } catch (e) {
+      NotificationService().showError('❌ Error checking accessibility service: $e');
+    }
+  }
 
   Future<void> _handleLogout() async {
     // Show confirmation dialog
@@ -49,12 +69,17 @@ class _HomeState extends State<Home> {
   void _showDeveloperMenu() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (BuildContext context) {
         return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
           padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 '🛠️ Developer Settings',
@@ -64,14 +89,33 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                'Current Environment: ${RequestHandler.currentEnvironment}',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'API URL: ${RequestHandler.apiBaseUrl}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              // Environment Information
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Environment: ${RequestHandler.currentEnvironment}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: RequestHandler.currentEnvironment == 'Production' 
+                            ? Colors.green 
+                            : Colors.orange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'API URL: ${RequestHandler.apiBaseUrl}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -82,12 +126,7 @@ class _HomeState extends State<Home> {
                         RequestHandler.useProduction();
                         setState(() {});
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ Switched to Production'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
+                        NotificationService().showSuccess('✅ Switched to Production');
                       },
                       icon: const Icon(Icons.cloud),
                       label: const Text('Production'),
@@ -105,12 +144,7 @@ class _HomeState extends State<Home> {
                         RequestHandler.useStaging();
                         setState(() {});
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('🔧 Switched to Staging'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
+                        NotificationService().showWarning('🔧 Switched to Staging');
                       },
                       icon: const Icon(Icons.build),
                       label: const Text('Staging'),
@@ -131,15 +165,146 @@ class _HomeState extends State<Home> {
                     RequestHandler.toggleEnvironment();
                     setState(() {});
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('🔄 Toggled to ${RequestHandler.currentEnvironment}'),
-                        backgroundColor: Colors.blue,
-                      ),
-                    );
+                    NotificationService().showInfo('🔄 Toggled to ${RequestHandler.currentEnvironment}');
                   },
                   icon: const Icon(Icons.swap_horiz),
                   label: const Text('Toggle Environment'),
+                ),
+              ),
+              const Divider(height: 30),
+              const Text(
+                '📹 UI Snapshot Recording',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 15),
+              StreamBuilder<bool>(
+                stream: _recordingService.recordingStateStream,
+                initialData: _recordingService.isRecording,
+                builder: (context, snapshot) {
+                  final isRecording = snapshot.data ?? false;
+                  return Column(
+                    children: [
+                      SwitchListTile(
+                        title: const Text('Recording Mode'),
+                        subtitle: Text(isRecording ? 'Recording in progress...' : 'Start recording UI snapshots'),
+                        value: isRecording,
+                        onChanged: (value) async {
+                          if (value) {
+                            await _recordingService.startRecording();
+                          } else {
+                            await _recordingService.stopRecording();
+                            if (mounted && _recordingService.snapshotCount > 0) {
+                              // Note: This notification is now handled by the recording service itself
+                            }
+                          }
+                        },
+                      ),
+                      StreamBuilder<int>(
+                        stream: _recordingService.snapshotCountStream,
+                        initialData: _recordingService.snapshotCount,
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return ListTile(
+                            leading: const Icon(Icons.photo_library),
+                            title: const Text('Captured Snapshots'),
+                            trailing: Text(
+                              count.toString(),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _recordingService.snapshotCount > 0
+                                  ? () async {
+                                      Navigator.pop(context); // Close developer menu first
+                                      
+                                      // Snapshots are already auto-saved to Downloads
+                                      // Just show confirmation
+                                      NotificationService().showSuccess('✅ Snapshots already saved to Downloads');
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.download),
+                              label: const Text('Saved to Downloads'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _recordingService.snapshotCount > 0
+                                  ? () async {
+                                      final shouldClear = await showDialog<bool>(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            title: const Text('Clear Snapshots'),
+                                            content: Text('Are you sure you want to clear ${_recordingService.snapshotCount} snapshots?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(true),
+                                                child: const Text('Clear'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                      
+                                      if (shouldClear == true) {
+                                        _recordingService.clearSnapshots();
+                                        Navigator.pop(context);
+                                        NotificationService().showSuccess('✅ Snapshots cleared');
+                                      }
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.delete),
+                              label: const Text('Clear'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const Divider(height: 30),
+              const Text(
+                '📊 System Status',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context); // Close developer menu
+                    _showCollectorStatus();
+                  },
+                  icon: const Icon(Icons.info_outline),
+                  label: const Text('Collector Status'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    side: const BorderSide(color: Colors.blue),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -148,6 +313,7 @@ class _HomeState extends State<Home> {
                 child: const Text('Close'),
               ),
             ],
+            ),
           ),
         );
       },
@@ -180,21 +346,9 @@ class _HomeState extends State<Home> {
     Navigator.of(context).pop();
     
     if (result.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Successfully tested collectors: ${result.message}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      NotificationService().showSuccess('✅ Successfully tested collectors: ${result.message}');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Failed to test collectors: ${result.message}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      NotificationService().showError('❌ Failed to test collectors: ${result.message}');
     }
   }
 
@@ -244,14 +398,53 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    // Set context for notification service
+    NotificationService().setContext(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
           onLongPress: _showDeveloperMenu,
-          child: const Text('Driver\'s Seat Cooperative'),
+          child: const Text('Handlebar'),
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          // Recording indicator
+          StreamBuilder<bool>(
+            stream: _recordingService.recordingStateStream,
+            initialData: _recordingService.isRecording,
+            builder: (context, snapshot) {
+              final isRecording = snapshot.data ?? false;
+              if (!isRecording) return const SizedBox.shrink();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.fiber_manual_record,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'REC',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           // Environment indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -307,18 +500,8 @@ class _HomeState extends State<Home> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Environment: ${RequestHandler.currentEnvironment}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: RequestHandler.currentEnvironment == 'Production' 
-                      ? Colors.green 
-                      : Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
               const SizedBox(height: 48),
+              // Main action buttons
               PlatformElevatedButton(
                 onPressed: () {
                   context.go('/study-consent');
@@ -327,36 +510,13 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 16),
               PlatformElevatedButton(
-                onPressed: () {
-                  context.go('/crepe-events-test');
-                },
-                child: const Text('Test CrepeEvents'),
+                onPressed: _enableAccessibilityService,
+                child: const Text('Enable Accessibility Service'),
               ),
               const SizedBox(height: 16),
               PlatformElevatedButton(
                 onPressed: _testCollectors,
-                child: const Text('Test Active Collectors'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _showCollectorStatus,
-                icon: const Icon(Icons.info_outline),
-                label: const Text('Collector Status'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  side: const BorderSide(color: Colors.blue),
-                ),
-              ),
-              const SizedBox(height: 32),
-              // Logout button
-              OutlinedButton.icon(
-                onPressed: _handleLogout,
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                ),
+                child: const Text('Enable Monitoring'),
               ),
               const SizedBox(height: 16),
               // Developer menu hint (only in debug mode)

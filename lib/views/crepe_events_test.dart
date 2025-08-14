@@ -186,7 +186,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
 
     try {
       final crepeEvent = CrepeEvent(
-        dataFieldId: 3,
+        dataFieldId: 2,
         collectedAt: DateTime.now(),
         content: jsonEncode(crepeEventData),
       );

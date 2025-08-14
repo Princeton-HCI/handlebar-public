@@ -4,10 +4,17 @@ import 'package:handlebar/services/collector_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:logging/logging.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configure logging
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+  });
   
   // Initialize RequestHandler to load stored authentication state
   final requestHandler = RequestHandler();
@@ -40,9 +47,7 @@ class _HandlebarAppState extends State<HandlebarApp> {
             ],
             title: 'Handlebar',
             routerConfig: navRouter,
-            material: (_, __) => MaterialAppRouterData(
-              scaffoldMessengerKey: CollectorService.scaffoldMessengerKey,
-            ),
+            material: (_, __) => MaterialAppRouterData(),
             cupertino: (_, __) => CupertinoAppRouterData(),
           ),
       ),

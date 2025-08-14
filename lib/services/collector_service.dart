@@ -9,6 +9,7 @@ import 'package:handlebar/models/CollectorMatch.dart';
 import 'package:handlebar/models/CrepeEvent.dart';
 import 'package:handlebar/models/MatchResult.dart';
 import 'package:handlebar/models/Result.dart';
+import 'package:handlebar/services/notification_service.dart';
 
 // Service to manage active collectors from the backend
 // Handles fetching, parsing, and setting up collectors with the plugin
@@ -27,18 +28,9 @@ class CollectorService {
   CollectorResponse? _activeCollectorResponse;
   bool _isInitialized = false;
 
-  // Global scaffold messenger key for showing error messages
-  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  
-  /// Show error message to user via snackbar
+  /// Show error message to user via notification service
   static void _showErrorToUser(String message) {
-    scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text('CollectorService Error: $message'),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 5),
-      ),
-    );
+    NotificationService().showError('CollectorService Error: $message');
   }
 
   /// Initialize the collector service and fetch active collectors
