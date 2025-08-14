@@ -9,19 +9,10 @@ Run with `flutter run`
 ### keystoreProperties
 
 
-### Plugin installation from Git
+### Plugin installation with git submodules
 
-To use the latest version from the main branch, add this to your package's `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  crepe_plugin:
-    git:
-      url: git@github.com:Princeton-HCI/crepe-flutter-plugin.git
-      ref: main
-```
-
-This will use the main branch of the plugin, ensuring you have access to the latest features and updates.
+The [crepe flutter plugin](https://github.com/Princeton-HCI/crepe-flutter-plugin) is installed here as a git submodule, see
+`.gitmodules` for details.
 
 ### SSH Keys Requirement
 

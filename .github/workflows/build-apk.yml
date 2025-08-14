@@ -1,0 +1,57 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  # Disabled since these take 15 mins to run...
+  # pull_request:
+    # branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.5'
+        channel: 'stable'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+
+    - name: Build debug APK
+      run: flutter build apk --debug
+
+    - name: Rename debug APK
+      run: |
+        cd build/app/outputs/flutter-apk
+        mv app-debug.apk "handlebar-$(git rev-parse --short HEAD)-debug.apk"
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: handlebar-apk
+        path: build/app/outputs/flutter-apk/handlebar-*.apk
+        retention-days: 30
+
+    - name: Get APK info
+      run: |
+        cd build/app/outputs/flutter-apk
+        ls -la handlebar-*.apk
+        echo "APK size:"
+        du -h handlebar-*.apk
