@@ -1,4 +1,5 @@
-import 'CrepeEvent.dart';
+import 'dart:developer';
+import 'crepe_event.dart';
 
 /// Represents a successful match between collected data and a data field,
 /// containing the matched value and metadata about when and what was matched.
@@ -21,10 +22,11 @@ class CollectorMatch {
     return CollectorMatch(
       dataFieldId: _parseId(json['datafieldId'] ?? json['data_field_id']),
       value: json['value']?.toString() ?? json['content']?.toString() ?? '',
-      collectorId: json['collectorId'] != null ? _parseId(json['collectorId']) : null,
+      collectorId:
+          json['collectorId'] != null ? _parseId(json['collectorId']) : null,
       dataFieldName: json['name']?.toString(),
-      matchedAt: json['matchedAt'] != null 
-          ? DateTime.parse(json['matchedAt']) 
+      matchedAt: json['matchedAt'] != null
+          ? DateTime.parse(json['matchedAt'])
           : DateTime.now(),
     );
   }
@@ -34,11 +36,13 @@ class CollectorMatch {
     if (value is String) {
       final parsed = int.tryParse(value);
       if (parsed == null) {
-        print('⚠️ [CollectorMatch] Failed to parse ID from string: "$value", defaulting to -1');
+        log('Failed to parse ID from string: "$value", defaulting to -1',
+            name: 'CollectorMatch');
       }
       return parsed ?? -1;
     }
-    print('⚠️ [CollectorMatch] Unexpected ID type: ${value.runtimeType} (value: $value), defaulting to -1');
+    log('Unexpected ID type: ${value.runtimeType} (value: $value), defaulting to -1',
+        name: 'CollectorMatch');
     return -1;
   }
 

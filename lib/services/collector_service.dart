@@ -1,20 +1,15 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:flutter/material.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:handlebar/network/request_handler.dart';
-import 'package:handlebar/models/Collector.dart';
-import 'package:handlebar/models/CollectorResponse.dart';
-import 'package:handlebar/models/CollectorMatch.dart';
-import 'package:handlebar/models/CrepeEvent.dart';
-import 'package:handlebar/models/MatchResult.dart';
-import 'package:handlebar/models/Result.dart';
+import 'package:handlebar/models/collector_response.dart';
+import 'package:handlebar/models/collector_match.dart';
+import 'package:handlebar/models/match_result.dart';
 import 'package:handlebar/services/notification_service.dart';
 
 // Service to manage active collectors from the backend
 // Handles fetching, parsing, and setting up collectors with the plugin
 class CollectorService {
-
   // Singleton instance
   static final CollectorService _instance = CollectorService._internal();
   factory CollectorService() => _instance;
@@ -23,7 +18,7 @@ class CollectorService {
   // Request handler for fetching collectors from the backend
   final RequestHandler _requestHandler = RequestHandler();
   final CrepePlugin _crepePlugin = CrepePlugin();
-  
+
   // Store the current active collectors
   CollectorResponse? _activeCollectorResponse;
   bool _isInitialized = false;
@@ -38,19 +33,19 @@ class CollectorService {
     try {
       // Initialize graph query system
       await _crepePlugin.initializeGraphQuery();
-      
+
       // Set up callback for continuous monitoring matches
       _crepePlugin.setCollectorMatchesCallback(_handleContinuousMatches);
-      
+
       // Fetch and set active collectors
       final success = await fetchAndSetActiveCollectors();
-      
+
       if (success) {
         _isInitialized = true;
         // Enable continuous monitoring with the fetched collectors
         await _enableContinuousMonitoring();
       }
-      
+
       return success;
     } catch (e) {
       log('❌ [CollectorService] Error initializing: $e');
@@ -65,7 +60,8 @@ class CollectorService {
       try {
         final pluginData = _activeCollectorResponse!.toPluginFormat();
         final collectorsJson = jsonEncode(pluginData);
-        await _crepePlugin.setContinuousMonitoring(true, collectorsJson: collectorsJson);
+        await _crepePlugin.setContinuousMonitoring(true,
+            collectorsJson: collectorsJson);
         log('🔄 [CollectorService] Continuous monitoring enabled');
       } catch (e) {
         log('❌ [CollectorService] Failed to enable continuous monitoring: $e');
@@ -80,7 +76,7 @@ class CollectorService {
       final matchResult = MatchResult.fromJson(eventData);
       if (matchResult.hasMatches) {
         log('🎯 [CollectorService] Found ${matchResult.matches.length} continuous matches!');
-        
+
         // Send events for each match
         for (final match in matchResult.matches) {
           _sendCrepeEventForMatch(match);
@@ -112,21 +108,21 @@ class CollectorService {
   Future<bool> fetchAndSetActiveCollectors() async {
     try {
       log('📡 [CollectorService] Getting active collectors from backend...');
-      
+
       final result = await _requestHandler.getActiveCollectors();
-      
+
       return result.fold(
         onSuccess: (response) async {
           _activeCollectorResponse = response;
-          
+
           log('✅ [CollectorService] Got ${response.collectors.length} active collectors');
-          
+
           // Update UI snapshot before processing collectors
           await _crepePlugin.updateSnapshot();
-          
+
           // Process collectors with the plugin
           await processCollectorsWithPlugin();
-          
+
           return true;
         },
         onFailure: (error) {
@@ -151,11 +147,12 @@ class CollectorService {
     try {
       final pluginData = _activeCollectorResponse!.toPluginFormat();
       final transformedJson = jsonEncode(pluginData);
-      
+
       // Use the plugin to match collector data against current UI
-      final matchResultJson = await _crepePlugin.matchCollectorData(transformedJson);
+      final matchResultJson =
+          await _crepePlugin.matchCollectorData(transformedJson);
       final matchResult = MatchResult.fromJson(matchResultJson);
-      
+
       if (matchResult.hasMatches) {
         for (final match in matchResult.matches) {
           await _sendCrepeEventForMatch(match);
@@ -166,7 +163,6 @@ class CollectorService {
       _showErrorToUser('Error processing collectors: $e');
     }
   }
-
 
   /// Update UI snapshot and check for collector matches
   Future<void> updateUiSnapshotAndCheckForMatches() async {
@@ -187,19 +183,19 @@ class CollectorService {
 
   /// Get the current active collectors response
   CollectorResponse? get activeCollectorResponse => _activeCollectorResponse;
-  
+
   /// Check if the service is initialized
   bool get isInitialized => _isInitialized;
 
   /// Manually trigger a refresh of collectors from the backend
   Future<bool> refreshCollectors() async {
     final success = await fetchAndSetActiveCollectors();
-    
+
     if (success) {
       // Update continuous monitoring with new collectors
       await _enableContinuousMonitoring();
     }
-    
+
     return success;
   }
 
@@ -207,7 +203,7 @@ class CollectorService {
   Future<TestResult> testActiveCollectors() async {
     try {
       log('🧪 [CollectorService] Starting collector test...');
-      
+
       // Step 1: Initialize if not already done
       if (!_isInitialized) {
         final initSuccess = await initialize();
@@ -215,25 +211,24 @@ class CollectorService {
           return TestResult(false, "Failed to initialize");
         }
       }
-      
+
       // Step 2: Fetch fresh collectors
       final fetchSuccess = await refreshCollectors();
       if (!fetchSuccess) {
         return TestResult(false, "Failed to fetch collectors");
       }
-      
+
       // Step 3: ALWAYS update UI snapshot to capture current screen
       log('📸 [CollectorService] Updating UI snapshot for current screen...');
       await _crepePlugin.updateSnapshot();
-      
+
       // Step 4: Process collectors against current UI
       await processCollectorsWithPlugin();
-      
+
       // Step 5: Report results
       final collectorsCount = _activeCollectorResponse?.collectors.length ?? 0;
-      
+
       return TestResult(true, "Processed $collectorsCount collectors");
-      
     } catch (e) {
       log('❌ [CollectorService] Test failed: $e');
       _showErrorToUser('Collector test failed: $e');
@@ -246,6 +241,6 @@ class CollectorService {
 class TestResult {
   final bool success;
   final String message;
-  
+
   TestResult(this.success, this.message);
-} 
+}

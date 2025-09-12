@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:handlebar/network/request_handler.dart';
 import 'package:handlebar/storage/device/secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:handlebar/models/CrepeEvent.dart';
+import 'package:handlebar/models/crepe_event.dart';
 
 class CrepeEventsTest extends StatefulWidget {
   const CrepeEventsTest({super.key});
@@ -14,7 +14,8 @@ class CrepeEventsTest extends StatefulWidget {
   State<CrepeEventsTest> createState() => _CrepeEventsTestState();
 }
 
-class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingObserver {
+class _CrepeEventsTestState extends State<CrepeEventsTest>
+    with WidgetsBindingObserver {
   final _crepePlugin = CrepePlugin();
   final _requestHandler = RequestHandler();
   final _secureStorage = SecureStorage();
@@ -63,10 +64,10 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     try {
       final isAuthenticated = _requestHandler.isAuthenticated();
       _userEmail = _secureStorage.email;
-      
+
       setState(() {
         _isAuthenticated = isAuthenticated;
-        _authStatus = isAuthenticated 
+        _authStatus = isAuthenticated
             ? 'Authenticated as: $_userEmail'
             : 'Not authenticated. Please log in through the main app.';
         _isCheckingAuth = false;
@@ -82,9 +83,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
 
   Future<void> _checkAccessibilityStatus() async {
     if (_isCheckingStatus) return; // Prevent multiple simultaneous checks
-    
+
     setState(() => _isCheckingStatus = true);
-    
+
     try {
       final enabled = await _crepePlugin.isAccessibilityServiceEnabled();
       if (mounted) {
@@ -107,8 +108,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
   Future<void> _requestAccessibilityPermission() async {
     try {
       await _crepePlugin.requestAccessibilityPermission();
-      setState(() => _accessibilityStatus = 'Permission requested - check system settings');
-      
+      setState(() => _accessibilityStatus =
+          'Permission requested - check system settings');
+
       // Check status again after a delay to give user time to enable it
       Future.delayed(const Duration(seconds: 1), _checkAccessibilityStatus);
     } catch (e) {
@@ -120,7 +122,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     try {
       // Get accessibility data from the plugin
       final accessibilityData = await _crepePlugin.getAccessibilityData();
-      
+
       // Generate a dummy CrepeEvent payload
       final crepeEvent = {
         'eventId': 'test-event-${DateTime.now().millisecondsSinceEpoch}',
@@ -129,7 +131,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
         'appPackage': 'co.wao.handlebar',
         'activityName': 'CrepeEventsTest',
         'eventData': {
-          'accessibilityData': accessibilityData ?? 'No accessibility data available',
+          'accessibilityData': accessibilityData,
           'screenData': {
             'screenId': 'crepe_events_test_screen',
             'screenName': 'CrepeEvents Test Screen',
@@ -178,9 +180,11 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     }
   }
 
-  Future<void> _sendCrepeEventToBackend(Map<String, dynamic> crepeEventData) async {
+  Future<void> _sendCrepeEventToBackend(
+      Map<String, dynamic> crepeEventData) async {
     if (!_isAuthenticated) {
-      setState(() => _testResult = 'ERROR: Not authenticated. Please log in through the main app.');
+      setState(() => _testResult =
+          'ERROR: Not authenticated. Please log in through the main app.');
       return;
     }
 
@@ -195,9 +199,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
       if (result.success) {
         setState(() {
           _testResult = 'SUCCESS: CrepeEvent sent to backend!\n'
-                      'Environment: ${RequestHandler.currentEnvironment}\n'
-                      'User: $_userEmail\n'
-                      'Response: ${result.userData?.toString() ?? 'No response data'}';
+              'Environment: ${RequestHandler.currentEnvironment}\n'
+              'User: $_userEmail\n'
+              'Response: ${result.userData?.toString() ?? 'No response data'}';
         });
       } else {
         setState(() {
@@ -207,7 +211,7 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     } catch (e) {
       setState(() {
         _testResult = 'ERROR: Failed to send CrepeEvent\n'
-                    'Error: $e';
+            'Error: $e';
       });
     }
   }
@@ -221,10 +225,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
     try {
       // Generate dummy CrepeEvent
       final crepeEvent = await _generateDummyCrepeEvent();
-      
+
       // Send to backend
       await _sendCrepeEventToBackend(crepeEvent);
-      
     } catch (e) {
       setState(() {
         _testResult = 'ERROR: $e';
@@ -252,15 +255,18 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 if (statusText != null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor?.withOpacity(0.2) ?? Colors.grey.withOpacity(0.2),
+                      color: statusColor?.withValues(alpha: 0.2) ??
+                          Colors.grey.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: statusColor ?? Colors.grey),
                     ),
@@ -303,18 +309,20 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
             // Authentication Status Card
             _buildCard(
               title: 'Authentication Status',
-              statusText: _isAuthenticated ? 'Authenticated' : 'Not Authenticated',
+              statusText:
+                  _isAuthenticated ? 'Authenticated' : 'Not Authenticated',
               statusColor: _isAuthenticated ? Colors.green : Colors.red,
               children: [
                 if (_userEmail != null) ...[
                   Text(
                     'Logged in as: $_userEmail',
-                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        color: Colors.grey[600], fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                 ],
                 Text(
-                  _isAuthenticated 
+                  _isAuthenticated
                       ? 'Using existing user session for CrepeEvents testing.'
                       : 'Please log in through the main app to test CrepeEvents.',
                   style: TextStyle(color: Colors.grey[600]),
@@ -324,15 +332,17 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                   children: [
                     Expanded(
                       child: PlatformElevatedButton(
-                        onPressed: _isCheckingAuth ? null : _checkAuthenticationStatus,
-                        child: _isCheckingAuth 
+                        onPressed:
+                            _isCheckingAuth ? null : _checkAuthenticationStatus,
+                        child: _isCheckingAuth
                             ? const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   ),
                                   SizedBox(width: 8),
                                   Text('Checking...'),
@@ -349,7 +359,10 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                   decoration: BoxDecoration(
                     color: _isAuthenticated ? Colors.green[50] : Colors.red[50],
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _isAuthenticated ? Colors.green[200]! : Colors.red[200]!),
+                    border: Border.all(
+                        color: _isAuthenticated
+                            ? Colors.green[200]!
+                            : Colors.red[200]!),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,7 +370,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                       Row(
                         children: [
                           Icon(
-                            _isAuthenticated ? Icons.check_circle : Icons.warning,
+                            _isAuthenticated
+                                ? Icons.check_circle
+                                : Icons.warning,
                             color: _isAuthenticated ? Colors.green : Colors.red,
                             size: 20,
                           ),
@@ -382,9 +397,10 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
             // Accessibility Status Card
             _buildCard(
               title: 'Accessibility Service',
-              statusText: _isCheckingStatus ? 'Checking...' : _accessibilityStatus,
-              statusColor: _isCheckingStatus 
-                  ? Colors.orange 
+              statusText:
+                  _isCheckingStatus ? 'Checking...' : _accessibilityStatus,
+              statusColor: _isCheckingStatus
+                  ? Colors.orange
                   : (_isServiceEnabled ? Colors.green : Colors.red),
               children: [
                 Text(
@@ -408,8 +424,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                       ),
                     if (!_isServiceEnabled) const SizedBox(width: 8),
                     PlatformElevatedButton(
-                      onPressed: _isCheckingStatus ? null : _checkAccessibilityStatus,
-                      child: _isCheckingStatus 
+                      onPressed:
+                          _isCheckingStatus ? null : _checkAccessibilityStatus,
+                      child: _isCheckingStatus
                           ? const SizedBox(
                               width: 16,
                               height: 16,
@@ -444,7 +461,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
             _buildCard(
               title: 'Environment Info',
               statusText: RequestHandler.currentEnvironment,
-              statusColor: RequestHandler.currentEnvironment == 'Production' ? Colors.blue : Colors.orange,
+              statusColor: RequestHandler.currentEnvironment == 'Production'
+                  ? Colors.blue
+                  : Colors.orange,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -469,12 +488,14 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                       const SizedBox(height: 8),
                       Text(
                         'Base URL: ${RequestHandler.apiBaseUrl}',
-                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 12),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Endpoint: ${RequestHandler.apiBaseUrl}/api/crepe/event',
-                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 12),
                       ),
                     ],
                   ),
@@ -492,8 +513,10 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                 ),
                 const SizedBox(height: 16),
                 PlatformElevatedButton(
-                  onPressed: (_isLoading || !_isAuthenticated) ? null : _testCrepeEvents,
-                  child: _isLoading 
+                  onPressed: (_isLoading || !_isAuthenticated)
+                      ? null
+                      : _testCrepeEvents,
+                  child: _isLoading
                       ? const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -506,7 +529,9 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                             Text('Testing...'),
                           ],
                         )
-                      : Text(!_isAuthenticated ? 'Log In Required' : 'Send Test CrepeEvent'),
+                      : Text(!_isAuthenticated
+                          ? 'Log In Required'
+                          : 'Send Test CrepeEvent'),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -526,7 +551,8 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
                       const SizedBox(height: 8),
                       Text(
                         _testResult,
-                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 12),
                       ),
                     ],
                   ),
@@ -538,4 +564,4 @@ class _CrepeEventsTestState extends State<CrepeEventsTest> with WidgetsBindingOb
       ),
     );
   }
-} 
+}

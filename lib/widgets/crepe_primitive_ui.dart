@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-Widget CrepePrimitiveUI(Map<String, dynamic> snapshot) {
+Widget crepePrimitiveUI(Map<String, dynamic> snapshot) {
   final entities = snapshot['entities'] as List<dynamic>;
 
   return ListView(

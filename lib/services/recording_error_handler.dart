@@ -38,7 +38,6 @@ class RecordingError {
       case RecordingErrorType.fileSystemError:
         return 'File system error occurred. Please check available storage space.';
       case RecordingErrorType.unknown:
-      default:
         return 'An unexpected error occurred. Please try again.';
     }
   }
@@ -58,14 +57,14 @@ class RecordingError {
       case RecordingErrorType.fileSystemError:
         return 'Free up storage space on your device and try again.';
       case RecordingErrorType.unknown:
-      default:
         return 'If the problem persists, please restart the app.';
     }
   }
 }
 
 class RecordingErrorHandler {
-  static final RecordingErrorHandler _instance = RecordingErrorHandler._internal();
+  static final RecordingErrorHandler _instance =
+      RecordingErrorHandler._internal();
   factory RecordingErrorHandler() => _instance;
   RecordingErrorHandler._internal();
 
@@ -95,39 +94,42 @@ class RecordingErrorHandler {
 
   RecordingErrorType _classifyError(dynamic error) {
     if (error == null) return RecordingErrorType.unknown;
-    
+
     String errorString = error.toString().toLowerCase();
-    
+
     if (errorString.contains('accessibility')) {
       return RecordingErrorType.accessibilityServiceDisabled;
-    } else if (errorString.contains('not initialized') || errorString.contains('null')) {
+    } else if (errorString.contains('not initialized') ||
+        errorString.contains('null')) {
       return RecordingErrorType.pluginNotInitialized;
     } else if (errorString.contains('snapshot')) {
       return RecordingErrorType.snapshotCaptureFailed;
-    } else if (errorString.contains('export') || errorString.contains('share')) {
+    } else if (errorString.contains('export') ||
+        errorString.contains('share')) {
       return RecordingErrorType.exportFailed;
     } else if (errorString.contains('memory')) {
       return RecordingErrorType.memoryLimit;
-    } else if (errorString.contains('file') || errorString.contains('storage')) {
+    } else if (errorString.contains('file') ||
+        errorString.contains('storage')) {
       return RecordingErrorType.fileSystemError;
     }
-    
+
     return RecordingErrorType.unknown;
   }
 
   String _extractMessage(dynamic error) {
     if (error == null) return 'Unknown error occurred';
-    
+
     if (error is Exception) {
       return error.toString().replaceAll('Exception: ', '');
     }
-    
+
     return error.toString();
   }
 
   void _addToHistory(RecordingError error) {
     _errorHistory.add(error);
-    
+
     if (_errorHistory.length > _maxErrorHistory) {
       _errorHistory.removeAt(0);
     }
@@ -142,7 +144,8 @@ class RecordingErrorHandler {
 
   void _showErrorToUser(RecordingError error) {
     // Show user-friendly error message with actionable guidance
-    final message = '${error.userFriendlyMessage}\n\n${error.actionableGuidance}';
+    final message =
+        '${error.userFriendlyMessage}\n\n${error.actionableGuidance}';
     _notificationService.showError(message);
   }
 
@@ -151,10 +154,10 @@ class RecordingErrorHandler {
     debugPrint('Error history cleared');
   }
 
-  bool hasRecentError(RecordingErrorType type, {Duration within = const Duration(minutes: 5)}) {
+  bool hasRecentError(RecordingErrorType type,
+      {Duration within = const Duration(minutes: 5)}) {
     final cutoff = DateTime.now().subtract(within);
-    return _errorHistory.any((error) => 
-      error.type == type && error.timestamp.isAfter(cutoff)
-    );
+    return _errorHistory
+        .any((error) => error.type == type && error.timestamp.isAfter(cutoff));
   }
 }

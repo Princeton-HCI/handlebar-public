@@ -3,16 +3,14 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:handlebar/storage/device/secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:handlebar/models/Result.dart';
-import 'package:handlebar/models/CollectorResponse.dart';
-import 'package:handlebar/models/CrepeEvent.dart';
+import 'package:handlebar/models/result.dart';
+import 'package:handlebar/models/collector_response.dart';
+import 'package:handlebar/models/crepe_event.dart';
 
 class RequestHandler {
   final secureStorage = SecureStorage();
@@ -21,26 +19,30 @@ class RequestHandler {
   };
 
   // API Environment Configuration
-  static const String _stagingUrl = 'https://dsc-api-staging-23350212163.us-central1.run.app';
-  static const String _productionUrl = 'https://dsc-api-service-23350212163.us-central1.run.app';
-  
+  static const String _stagingUrl =
+      'https://dsc-api-staging-23350212163.us-central1.run.app';
+  static const String _productionUrl =
+      'https://dsc-api-service-23350212163.us-central1.run.app';
+
   static bool _useProduction = kDebugMode ? false : true;
   static String get apiBaseUrl => _useProduction ? _productionUrl : _stagingUrl;
-  static String get currentEnvironment => _useProduction ? 'Production' : 'Staging';
-  
+  static String get currentEnvironment =>
+      _useProduction ? 'Production' : 'Staging';
+
   static void useProduction() {
     _useProduction = true;
     log('✅ Switched to Production: $_productionUrl', name: 'RequestHandler');
   }
-  
+
   static void useStaging() {
     _useProduction = false;
     log('🔧 Switched to Staging: $_stagingUrl', name: 'RequestHandler');
   }
-  
+
   static void toggleEnvironment() {
     _useProduction = !_useProduction;
-    log('🔄 Toggled to ${currentEnvironment}: ${apiBaseUrl}', name: 'RequestHandler');
+    log('🔄 Toggled to $currentEnvironment: $apiBaseUrl',
+        name: 'RequestHandler');
   }
 
   // Set up singleton instance of RequestHandler
@@ -56,8 +58,9 @@ class RequestHandler {
   Future<void> initialize() async {
     await secureStorage.initialize();
     await _updateAuthorizationHeader();
-    
-    log('🌐 API Environment: ${currentEnvironment} (${apiBaseUrl})', name: 'RequestHandler');
+
+    log('🌐 API Environment: $currentEnvironment ($apiBaseUrl)',
+        name: 'RequestHandler');
   }
 
   // Update the authorization header with the stored access token
@@ -95,7 +98,8 @@ class RequestHandler {
       log("Device timezone: $timezone", name: 'RequestHandler.DeviceInfo');
       return timezone;
     } catch (e) {
-      log("Error getting timezone", error: e, name: 'RequestHandler.DeviceInfo');
+      log("Error getting timezone",
+          error: e, name: 'RequestHandler.DeviceInfo');
       return 'UTC'; // Safe fallback
     }
   }
@@ -115,36 +119,38 @@ class RequestHandler {
       // Get actual app version
       final packageInfo = await PackageInfo.fromPlatform();
       final appVersion = "${packageInfo.version}+${packageInfo.buildNumber}";
-      
+
       String deviceInfo = "";
 
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
-        
+
         // Format: "AppVersion / Manufacturer: Model, OS, Version"
-        deviceInfo = "$appVersion / ${androidInfo.manufacturer}: ${androidInfo.model}, android, ${androidInfo.version.release}";
-        
+        deviceInfo =
+            "$appVersion / ${androidInfo.manufacturer}: ${androidInfo.model}, android, ${androidInfo.version.release}";
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfoPlugin.iosInfo;
-        
+
         // Format: "AppVersion / Apple: Model, iOS, Version"
-        deviceInfo = "$appVersion / Apple: ${iosInfo.model}, iOS, ${iosInfo.systemVersion}";
-        
+        deviceInfo =
+            "$appVersion / Apple: ${iosInfo.model}, iOS, ${iosInfo.systemVersion}";
       } else {
         deviceInfo = "$appVersion / Unknown: ${Platform.operatingSystem}";
       }
 
       return deviceInfo;
     } catch (e) {
-      log("Error getting device platform info", error: e, name: 'RequestHandler.DeviceInfo');
+      log("Error getting device platform info",
+          error: e, name: 'RequestHandler.DeviceInfo');
       return "1.0.0+1 / Unknown: ${Platform.operatingSystem}";
     }
   }
 
-  Future<AuthResult> requestNewUser(String newEmail, String newPassword, {String? referralCode}) async {
+  Future<AuthResult> requestNewUser(String newEmail, String newPassword,
+      {String? referralCode}) async {
     try {
       final response = await http.post(
-        Uri.parse('${apiBaseUrl}/api/users'),
+        Uri.parse('$apiBaseUrl/api/users'),
         headers: requestHeaders,
         body: jsonEncode({
           "user": {
@@ -162,26 +168,30 @@ class RequestHandler {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         final userData = responseData['data'] as Map<String, dynamic>?;
-        
+
         if (userData != null) {
           // Auto-login the newly created user
           final loginResult = await requestSession(newEmail, newPassword);
-          
+
           if (loginResult.success) {
-            log("User creation and login successful", name: 'RequestHandler.Auth');
-            return AuthResult(success: true, token: loginResult.token, userData: userData);
+            log("User creation and login successful",
+                name: 'RequestHandler.Auth');
+            return AuthResult(
+                success: true, token: loginResult.token, userData: userData);
           } else {
             return loginResult;
           }
         } else {
-          return AuthResult(success: false, error: "Invalid response format - no user data");
+          return AuthResult(
+              success: false, error: "Invalid response format - no user data");
         }
       } else {
         final error = _extractErrorMessage(response);
         return AuthResult(success: false, error: error);
       }
     } catch (e) {
-      return AuthResult(success: false, error: "Network error: ${e.toString()}");
+      return AuthResult(
+          success: false, error: "Network error: ${e.toString()}");
     }
   }
 
@@ -194,17 +204,18 @@ class RequestHandler {
         'dsc_last_name': userData['last_name'],
         'dsc_email': userData['email'],
       };
-      
+
       for (final entry in dataMap.entries) {
         if (entry.value != null) {
-          await secureStorage.storage.write(key: entry.key, value: entry.value!);
+          await secureStorage.storage
+              .write(key: entry.key, value: entry.value!);
         }
       }
-      
+
       if (userData['email'] != null) {
         secureStorage.email = userData['email'];
       }
-      
+
       log("User data saved successfully", name: 'RequestHandler.Storage');
     } catch (e) {
       log("Error saving user data", error: e, name: 'RequestHandler.Storage');
@@ -214,9 +225,11 @@ class RequestHandler {
   Future<AuthResult> requestSession(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('${apiBaseUrl}/api/sessions'),
+        Uri.parse('$apiBaseUrl/api/sessions'),
         headers: requestHeaders,
-        body: jsonEncode({"session": {"email": email, "password": password}}),
+        body: jsonEncode({
+          "session": {"email": email, "password": password}
+        }),
       );
 
       if (response.statusCode == 401) {
@@ -226,41 +239,46 @@ class RequestHandler {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         final userData = responseData['data'] as Map<String, dynamic>?;
-        
+
         if (userData != null) {
           // Extract and save auth token
           final authToken = _extractAuthToken(response);
-          
+
           if (authToken != null && authToken.isNotEmpty) {
             await _saveAuthToken(authToken);
           } else {
-            log("Warning: No authentication token found", name: 'RequestHandler.Auth');
+            log("Warning: No authentication token found",
+                name: 'RequestHandler.Auth');
           }
-          
+
           await _saveUserData(userData);
           log("Login successful", name: 'RequestHandler.Auth');
-          
-          return AuthResult(success: true, token: authToken, userData: userData);
+
+          return AuthResult(
+              success: true, token: authToken, userData: userData);
         } else {
-          return AuthResult(success: false, error: "Invalid response format - no user data found");
+          return AuthResult(
+              success: false,
+              error: "Invalid response format - no user data found");
         }
       } else {
         final error = _extractErrorMessage(response);
         return AuthResult(success: false, error: error);
       }
     } catch (e) {
-      return AuthResult(success: false, error: "Network error: ${e.toString()}");
+      return AuthResult(
+          success: false, error: "Network error: ${e.toString()}");
     }
   }
 
   // Extract auth token from response - simplified version
   String? _extractAuthToken(http.Response response) {
     final authHeader = response.headers['authorization'];
-    
+
     if (authHeader != null && authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7); // Remove "Bearer " prefix
     }
-    
+
     return null;
   }
 
@@ -269,7 +287,9 @@ class RequestHandler {
     if (response.statusCode == 401) {
       log("401 Unauthorized - clearing auth", name: 'RequestHandler.Auth');
       await clearAuthToken();
-      return AuthResult(success: false, error: "Your session has expired. Please log in again.");
+      return AuthResult(
+          success: false,
+          error: "Your session has expired. Please log in again.");
     }
     return null; // Continue processing
   }
@@ -283,7 +303,8 @@ class RequestHandler {
   bool isAuthenticated() {
     if (secureStorage.accessToken.isEmpty || secureStorage.isTokenExpired()) {
       if (secureStorage.accessToken.isNotEmpty) {
-        log("Token expired, clearing authentication", name: 'RequestHandler.Auth');
+        log("Token expired, clearing authentication",
+            name: 'RequestHandler.Auth');
         _clearExpiredTokenAsync();
       }
       return false;
@@ -304,9 +325,11 @@ class RequestHandler {
       }
 
       final response = await http.post(
-        Uri.parse('${apiBaseUrl}/api/accepted_terms'),
+        Uri.parse('$apiBaseUrl/api/accepted_terms'),
         headers: requestHeaders,
-        body: jsonEncode({'accepted_terms': {'terms_id': termsId}}),
+        body: jsonEncode({
+          'accepted_terms': {'terms_id': termsId}
+        }),
       );
 
       // Check for 401 unauthorized
@@ -326,7 +349,8 @@ class RequestHandler {
       final error = _extractErrorMessage(response);
       return AuthResult(success: false, error: error);
     } catch (e) {
-      return AuthResult(success: false, error: "Network error: ${e.toString()}");
+      return AuthResult(
+          success: false, error: "Network error: ${e.toString()}");
     }
   }
 
@@ -338,7 +362,7 @@ class RequestHandler {
       }
 
       final response = await http.get(
-        Uri.parse('${apiBaseUrl}/api/terms/current'),
+        Uri.parse('$apiBaseUrl/api/terms/current'),
         headers: requestHeaders,
       );
 
@@ -351,20 +375,21 @@ class RequestHandler {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         final data = responseData['data'] as Map<String, dynamic>?;
-        
+
         if (data != null) {
           final currentTerms = data['current_terms'] as Map<String, dynamic>?;
-          final currentAcceptedTerms = data['current_accepted_terms'] as Map<String, dynamic>?;
-          
+          final currentAcceptedTerms =
+              data['current_accepted_terms'] as Map<String, dynamic>?;
+
           final currentTermsId = currentTerms?['id'] as int?;
           final hasAcceptedCurrentTerms = currentAcceptedTerms != null;
-          
-          log("Current terms status checked: accepted=$hasAcceptedCurrentTerms, termsId=$currentTermsId", name: 'RequestHandler.Terms');
+
+          log("Current terms status checked: accepted=$hasAcceptedCurrentTerms, termsId=$currentTermsId",
+              name: 'RequestHandler.Terms');
           return TermsResult(
-            success: true, 
-            hasAcceptedCurrentTerms: hasAcceptedCurrentTerms,
-            currentTermsId: currentTermsId
-          );
+              success: true,
+              hasAcceptedCurrentTerms: hasAcceptedCurrentTerms,
+              currentTermsId: currentTermsId);
         } else {
           return TermsResult(success: false, error: "Invalid response format");
         }
@@ -373,7 +398,8 @@ class RequestHandler {
       final error = _extractErrorMessage(response);
       return TermsResult(success: false, error: error);
     } catch (e) {
-      return TermsResult(success: false, error: "Network error: ${e.toString()}");
+      return TermsResult(
+          success: false, error: "Network error: ${e.toString()}");
     }
   }
 
@@ -385,7 +411,7 @@ class RequestHandler {
       }
 
       final response = await http.post(
-        Uri.parse('${apiBaseUrl}/api/crepe/event'),
+        Uri.parse('$apiBaseUrl/api/crepe/event'),
         headers: requestHeaders,
         body: jsonEncode(crepeEvent.toJson()),
       );
@@ -402,22 +428,22 @@ class RequestHandler {
       final error = _extractErrorMessage(response);
       return AuthResult(success: false, error: error);
     } catch (e) {
-      return AuthResult(success: false, error: "Network error: ${e.toString()}");
+      return AuthResult(
+          success: false, error: "Network error: ${e.toString()}");
     }
   }
 
   // This is here in case we want to put getting the active collectors behind authentication
   Future<Result<CollectorResponse, ApiError>> getActiveCollectors() async {
     try {
-
       final response = await http.get(
-        Uri.parse('${apiBaseUrl}/api/crepe/collector'),
+        Uri.parse('$apiBaseUrl/api/crepe/collector'),
         headers: requestHeaders,
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        
+
         if (responseData['data'] != null) {
           final collectorResponse = CollectorResponse.fromJson(responseData);
           return Success(collectorResponse);
@@ -467,4 +493,3 @@ class TermsResult {
     this.currentTermsId,
   });
 }
-

@@ -32,16 +32,19 @@ class SecureStorage {
     userId = await storage.read(key: "dsc_user_id") ?? "";
     firstName = await storage.read(key: "dsc_first_name") ?? "";
     lastName = await storage.read(key: "dsc_last_name") ?? "";
-    String tokenExpiresDate = await storage.read(key: "dsc_token_expires") ?? "";
+    String tokenExpiresDate =
+        await storage.read(key: "dsc_token_expires") ?? "";
     if (tokenExpiresDate.isEmpty) {
       // Set token expiration to 90 days from now
       dateTokenExpires = DateTime.now().add(const Duration(days: 90));
-      await storage.write(key: "dsc_token_expires", value: dateTokenExpires.toString());
-    }
-    else {
+      await storage.write(
+          key: "dsc_token_expires", value: dateTokenExpires.toString());
+    } else {
       dateTokenExpires = DateTime.parse(tokenExpiresDate);
     }
-    dataPrivacyCheck = bool.parse(await storage.read(key: "dsc_privacy_consent") ?? "false", caseSensitive: false);
+    dataPrivacyCheck = bool.parse(
+        await storage.read(key: "dsc_privacy_consent") ?? "false",
+        caseSensitive: false);
   }
 
   // Check if the current token is expired
@@ -52,7 +55,8 @@ class SecureStorage {
   // Update token expiration when saving a new token
   Future<void> updateTokenExpiration() async {
     dateTokenExpires = DateTime.now().add(const Duration(days: 90));
-    await storage.write(key: "dsc_token_expires", value: dateTokenExpires.toString());
+    await storage.write(
+        key: "dsc_token_expires", value: dateTokenExpires.toString());
   }
 
   // Clear authentication tokens and user data
@@ -64,7 +68,7 @@ class SecureStorage {
     await storage.write(key: 'dsc_first_name', value: '');
     await storage.write(key: 'dsc_last_name', value: '');
     await storage.write(key: 'dsc_token_expires', value: '');
-    
+
     accessToken = '';
     refreshToken = '';
     email = '';

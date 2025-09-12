@@ -16,7 +16,7 @@ class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   bool _isLoading = false;
   bool _isCreatingUser = false;
   String? _errorMessage;
@@ -88,7 +88,8 @@ class _LoginState extends State<Login> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Network error. Please check your connection and try again.';
+          _errorMessage =
+              'Network error. Please check your connection and try again.';
         });
       }
     } finally {
@@ -123,14 +124,16 @@ class _LoginState extends State<Login> {
           context.go('/');
         } else {
           setState(() {
-            _errorMessage = result.error ?? 'Account creation failed. Please try again.';
+            _errorMessage =
+                result.error ?? 'Account creation failed. Please try again.';
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Network error. Please check your connection and try again.';
+          _errorMessage =
+              'Network error. Please check your connection and try again.';
         });
       }
     } finally {
@@ -192,7 +195,7 @@ class _LoginState extends State<Login> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Error message display
                   if (_errorMessage != null) ...[
                     Container(
@@ -227,7 +230,7 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                   ],
-                  
+
                   // Email field
                   TextFormField(
                     controller: emailController,
@@ -242,7 +245,7 @@ class _LoginState extends State<Login> {
                     onChanged: (_) => _clearError(),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Password field
                   TextFormField(
                     controller: passwordController,
@@ -257,24 +260,25 @@ class _LoginState extends State<Login> {
                     onChanged: (_) => _clearError(),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Forgot password link
                   Link(
                     uri: Uri.parse('https://www.driversseat.co/contact'),
                     builder: (BuildContext context, FollowLink? followLink) =>
                         TextButton(
-                          onPressed: followLink,
-                          child: const Text('Forgot Password?'),
-                        ),
+                      onPressed: followLink,
+                      child: const Text('Forgot Password?'),
+                    ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Login button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: PlatformElevatedButton(
-                      onPressed: (_isLoading || _isCreatingUser) ? null : _handleLogin,
+                      onPressed:
+                          (_isLoading || _isCreatingUser) ? null : _handleLogin,
                       child: _isLoading
                           ? const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -284,7 +288,8 @@ class _LoginState extends State<Login> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 ),
                                 SizedBox(width: 12),
@@ -295,13 +300,15 @@ class _LoginState extends State<Login> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Create new user button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: PlatformElevatedButton(
-                      onPressed: (_isLoading || _isCreatingUser) ? null : _handleCreateUser,
+                      onPressed: (_isLoading || _isCreatingUser)
+                          ? null
+                          : _handleCreateUser,
                       child: _isCreatingUser
                           ? const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -311,7 +318,8 @@ class _LoginState extends State<Login> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 ),
                                 SizedBox(width: 12),

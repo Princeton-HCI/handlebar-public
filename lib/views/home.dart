@@ -17,7 +17,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final RequestHandler _requestHandler = RequestHandler();
-  final UiSnapshotRecordingService _recordingService = UiSnapshotRecordingService();
+  final UiSnapshotRecordingService _recordingService =
+      UiSnapshotRecordingService();
 
   Future<void> _enableAccessibilityService() async {
     try {
@@ -26,13 +27,15 @@ class _HomeState extends State<Home> {
 
       if (isEnabled) {
         // Service is already enabled
-        NotificationService().showSuccess('✅ Accessibility service is already enabled');
+        NotificationService()
+            .showSuccess('✅ Accessibility service is already enabled');
       } else {
         // Open accessibility settings
         await crepePlugin.requestAccessibilityPermission();
       }
     } catch (e) {
-      NotificationService().showError('❌ Error checking accessibility service: $e');
+      NotificationService()
+          .showError('❌ Error checking accessibility service: $e');
     }
   }
 
@@ -103,16 +106,18 @@ class _HomeState extends State<Home> {
                         'Environment: ${RequestHandler.currentEnvironment}',
                         style: TextStyle(
                           fontSize: 16,
-                          color: RequestHandler.currentEnvironment == 'Production'
-                              ? Colors.green
-                              : Colors.orange,
+                          color:
+                              RequestHandler.currentEnvironment == 'Production'
+                                  ? Colors.green
+                                  : Colors.orange,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'API URL: ${RequestHandler.apiBaseUrl}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -126,14 +131,16 @@ class _HomeState extends State<Home> {
                           RequestHandler.useProduction();
                           setState(() {});
                           Navigator.pop(context);
-                          NotificationService().showSuccess('✅ Switched to Production');
+                          NotificationService()
+                              .showSuccess('✅ Switched to Production');
                         },
                         icon: const Icon(Icons.cloud),
                         label: const Text('Production'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: RequestHandler.currentEnvironment == 'Production'
-                              ? Colors.green
-                              : Colors.grey,
+                          backgroundColor:
+                              RequestHandler.currentEnvironment == 'Production'
+                                  ? Colors.green
+                                  : Colors.grey,
                         ),
                       ),
                     ),
@@ -144,14 +151,16 @@ class _HomeState extends State<Home> {
                           RequestHandler.useStaging();
                           setState(() {});
                           Navigator.pop(context);
-                          NotificationService().showWarning('🔧 Switched to Staging');
+                          NotificationService()
+                              .showWarning('🔧 Switched to Staging');
                         },
                         icon: const Icon(Icons.build),
                         label: const Text('Staging'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: RequestHandler.currentEnvironment == 'Staging'
-                              ? Colors.orange
-                              : Colors.grey,
+                          backgroundColor:
+                              RequestHandler.currentEnvironment == 'Staging'
+                                  ? Colors.orange
+                                  : Colors.grey,
                         ),
                       ),
                     ),
@@ -165,7 +174,8 @@ class _HomeState extends State<Home> {
                       RequestHandler.toggleEnvironment();
                       setState(() {});
                       Navigator.pop(context);
-                      NotificationService().showInfo('🔄 Toggled to ${RequestHandler.currentEnvironment}');
+                      NotificationService().showInfo(
+                          '🔄 Toggled to ${RequestHandler.currentEnvironment}');
                     },
                     icon: const Icon(Icons.swap_horiz),
                     label: const Text('Toggle Environment'),
@@ -189,14 +199,17 @@ class _HomeState extends State<Home> {
                       children: [
                         SwitchListTile(
                           title: const Text('Recording Mode'),
-                          subtitle: Text(isRecording ? 'Recording in progress...' : 'Start recording UI snapshots'),
+                          subtitle: Text(isRecording
+                              ? 'Recording in progress...'
+                              : 'Start recording UI snapshots'),
                           value: isRecording,
                           onChanged: (value) async {
                             if (value) {
                               await _recordingService.startRecording();
                             } else {
                               await _recordingService.stopRecording();
-                              if (mounted && _recordingService.snapshotCount > 0) {
+                              if (mounted &&
+                                  _recordingService.snapshotCount > 0) {
                                 // Note: This notification is now handled by the recording service itself
                               }
                             }
@@ -227,12 +240,14 @@ class _HomeState extends State<Home> {
                               child: ElevatedButton.icon(
                                 onPressed: _recordingService.snapshotCount > 0
                                     ? () async {
-                                  Navigator.pop(context); // Close developer menu first
+                                        Navigator.pop(
+                                            context); // Close developer menu first
 
-                                  // Snapshots are already auto-saved to Downloads
-                                  // Just show confirmation
-                                  NotificationService().showSuccess('✅ Snapshots already saved to Downloads');
-                                }
+                                        // Snapshots are already auto-saved to Downloads
+                                        // Just show confirmation
+                                        NotificationService().showSuccess(
+                                            '✅ Snapshots already saved to Downloads');
+                                      }
                                     : null,
                                 icon: const Icon(Icons.download),
                                 label: const Text('Saved to Downloads'),
@@ -246,32 +261,42 @@ class _HomeState extends State<Home> {
                               child: OutlinedButton.icon(
                                 onPressed: _recordingService.snapshotCount > 0
                                     ? () async {
-                                  final shouldClear = await showDialog<bool>(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: const Text('Clear Snapshots'),
-                                        content: Text('Are you sure you want to clear ${_recordingService.snapshotCount} snapshots?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(true),
-                                            child: const Text('Clear'),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
+                                        if (!mounted) return;
+                                        final navigator = Navigator.of(context);
+                                        final shouldClear =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title:
+                                                  const Text('Clear Snapshots'),
+                                              content: Text(
+                                                  'Are you sure you want to clear ${_recordingService.snapshotCount} snapshots?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
+                                                  child: const Text('Clear'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
 
-                                  if (shouldClear == true) {
-                                    _recordingService.clearSnapshots();
-                                    Navigator.pop(context);
-                                    NotificationService().showSuccess('✅ Snapshots cleared');
-                                  }
-                                }
+                                        if (mounted && shouldClear == true) {
+                                          _recordingService.clearSnapshots();
+                                          navigator.pop();
+                                          NotificationService().showSuccess(
+                                              '✅ Snapshots cleared');
+                                        }
+                                      }
                                     : null,
                                 icon: const Icon(Icons.delete),
                                 label: const Text('Clear'),
@@ -343,12 +368,16 @@ class _HomeState extends State<Home> {
     final result = await collectorService.testActiveCollectors();
 
     // Hide loading dialog
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
 
     if (result.success) {
-      NotificationService().showSuccess('✅ Successfully tested collectors: ${result.message}');
+      NotificationService()
+          .showSuccess('✅ Successfully tested collectors: ${result.message}');
     } else {
-      NotificationService().showError('❌ Failed to test collectors: ${result.message}');
+      NotificationService()
+          .showError('❌ Failed to test collectors: ${result.message}');
     }
   }
 
@@ -364,36 +393,41 @@ class _HomeState extends State<Home> {
       // Handle error silently
     }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('🎯 Collector Status'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Service Initialized: ${collectorService.isInitialized ? "✅" : "❌"}'),
-              const SizedBox(height: 8),
-              Text('Continuous Monitoring: ${isEnabled ? "🔄 ACTIVE" : "⏸️ INACTIVE"}'),
-              const SizedBox(height: 8),
-              Text('Active Collectors: ${collectorService.activeCollectorResponse != null ? "📊 LOADED (${collectorService.activeCollectorResponse!.collectors.length})" : "❌ NONE"}'),
-              const SizedBox(height: 16),
-              const Text(
-                'When continuous monitoring is active, the app will automatically detect when you navigate to collector target screens (like Maps) and send events to the backend.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('🎯 Collector Status'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'Service Initialized: ${collectorService.isInitialized ? "✅" : "❌"}'),
+                const SizedBox(height: 8),
+                Text(
+                    'Continuous Monitoring: ${isEnabled ? "🔄 ACTIVE" : "⏸️ INACTIVE"}'),
+                const SizedBox(height: 8),
+                Text(
+                    'Active Collectors: ${collectorService.activeCollectorResponse != null ? "📊 LOADED (${collectorService.activeCollectorResponse!.collectors.length})" : "❌ NONE"}'),
+                const SizedBox(height: 16),
+                const Text(
+                  'When continuous monitoring is active, the app will automatically detect when you navigate to collector target screens (like Maps) and send events to the backend.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -456,7 +490,9 @@ class _HomeState extends State<Home> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              RequestHandler.currentEnvironment == 'Production' ? 'PROD' : 'STAGE',
+              RequestHandler.currentEnvironment == 'Production'
+                  ? 'PROD'
+                  : 'STAGE',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,

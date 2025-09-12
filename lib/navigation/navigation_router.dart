@@ -1,4 +1,3 @@
-import 'package:handlebar/storage/device/secure_storage.dart';
 import 'package:handlebar/network/request_handler.dart';
 import 'package:handlebar/views/login.dart';
 import 'package:handlebar/views/home.dart';
@@ -63,4 +62,3 @@ GoRouter navigationRouter() {
     ],
   );
 }
-

@@ -36,7 +36,7 @@ class _StudyConsentState extends State<StudyConsent> {
 
     try {
       final result = await requestHandler.checkCurrentTerms();
-      
+
       if (result.success) {
         setState(() {
           isOptedIn = result.hasAcceptedCurrentTerms;
@@ -44,7 +44,8 @@ class _StudyConsentState extends State<StudyConsent> {
           isLoading = false;
         });
       } else {
-        log("Error checking terms status: ${result.error}", name: 'StudyConsent');
+        log("Error checking terms status: ${result.error}",
+            name: 'StudyConsent');
         setState(() {
           isOptedIn = false;
           currentTermsId = null;
@@ -63,23 +64,24 @@ class _StudyConsentState extends State<StudyConsent> {
 
   Future<void> _acceptCurrentTerms() async {
     if (isUpdating || currentTermsId == null) return;
-    
+
     setState(() {
       isUpdating = true;
     });
 
     try {
       final result = await requestHandler.acceptTerms(currentTermsId!);
-      
+
       if (result.success) {
         setState(() {
           isOptedIn = true;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('You have successfully opted into the research study'),
+              content:
+                  Text('You have successfully opted into the research study'),
               backgroundColor: Colors.green,
             ),
           );
@@ -168,7 +170,7 @@ class _StudyConsentState extends State<StudyConsent> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
 
             // IRB Information
@@ -207,7 +209,7 @@ class _StudyConsentState extends State<StudyConsent> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
 
             // Opt-in/Opt-out Section
@@ -221,7 +223,9 @@ class _StudyConsentState extends State<StudyConsent> {
                     Row(
                       children: [
                         Icon(
-                          isOptedIn ? Icons.check_circle : Icons.radio_button_unchecked,
+                          isOptedIn
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
                           color: isOptedIn ? Colors.green : Colors.grey,
                         ),
                         const SizedBox(width: 8),
@@ -235,7 +239,6 @@ class _StudyConsentState extends State<StudyConsent> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
                     if (!isOptedIn) ...[
                       const Text(
                         'Would you like to participate in this research study?',
@@ -245,15 +248,17 @@ class _StudyConsentState extends State<StudyConsent> {
                       SizedBox(
                         width: double.infinity,
                         child: PlatformElevatedButton(
-                          onPressed: isUpdating ? null : () => _acceptCurrentTerms(),
-                          child: isUpdating 
+                          onPressed:
+                              isUpdating ? null : () => _acceptCurrentTerms(),
+                          child: isUpdating
                               ? const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     ),
                                     SizedBox(width: 8),
                                     Text('Accepting Terms...'),
@@ -277,4 +282,4 @@ class _StudyConsentState extends State<StudyConsent> {
       ),
     );
   }
-} 
+}

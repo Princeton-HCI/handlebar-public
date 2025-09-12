@@ -1,4 +1,4 @@
-import 'DataField.dart';
+import 'data_field.dart';
 
 /// Represents a data collector configuration for a specific app, containing
 /// metadata about the target application and the data fields to collect from it.
@@ -57,6 +57,7 @@ class Collector {
 
   @override
   int get hashCode {
-    return Object.hash(collectorId, appName, appPackage, description, dataFields);
+    return Object.hash(
+        collectorId, appName, appPackage, description, dataFields);
   }
 }

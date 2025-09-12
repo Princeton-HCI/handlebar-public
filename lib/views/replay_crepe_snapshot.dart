@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
@@ -23,8 +24,8 @@ class _ReplayCrepeSnapshotState extends State<ReplayCrepeSnapshot> {
       body: snapshots.isEmpty
           ? Center(child: Text('No UI loaded'))
           : PageView(
-        children: snapshots.map((s) => CrepePrimitiveUI(s)).toList(),
-      ),
+              children: snapshots.map((s) => crepePrimitiveUI(s)).toList(),
+            ),
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.folder_open),
         onPressed: () async {
@@ -73,7 +74,7 @@ class _ReplayCrepeSnapshotState extends State<ReplayCrepeSnapshot> {
 
     List<Map<String, dynamic>> snapshots = [];
     for (final file in archive) {
-      print('Found: ${file.name}');
+      log('Found: ${file.name}', name: 'ReplayCrepeSnapshot');
     }
     for (final file in archive) {
       if (file.isFile && file.name.endsWith('.json')) {
