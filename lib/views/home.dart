@@ -345,7 +345,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  void _testCollectors() async {
+  Future<void> _testCollectors() async {
     final collectorService = CollectorService();
 
     // Show loading dialog
@@ -556,7 +556,9 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 16),
               PlatformElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  //throw Exception("Test sentry");
+                  await _testCollectors();
                   context.go('/replay-snapshot');
                 },
                 child: const Text('Replay Snapshot'),

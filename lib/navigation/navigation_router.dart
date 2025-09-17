@@ -1,7 +1,7 @@
 import 'package:handlebar/network/request_handler.dart';
 import 'package:handlebar/views/login.dart';
 import 'package:handlebar/views/home.dart';
-import 'package:handlebar/views/replay_crepe_snapshot.dart';
+import 'package:handlebar/views/crepe_snapshot_collectors.dart';
 import 'package:handlebar/views/study_consent.dart';
 import 'package:handlebar/views/crepe_events_test.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +56,7 @@ GoRouter navigationRouter() {
       GoRoute(
         path: '/replay-snapshot',
         builder: (BuildContext context, GoRouterState state) {
-          return const ReplayCrepeSnapshot();
+          return const CrepeSnapshotCollectors();
         },
       ),
     ],

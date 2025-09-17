@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:handlebar/network/request_handler.dart';
 import 'package:handlebar/models/collector_response.dart';
 import 'package:handlebar/models/collector_match.dart';
 import 'package:handlebar/models/match_result.dart';
 import 'package:handlebar/services/notification_service.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/collector.dart';
+import '../models/data_field.dart';
 
 // Service to manage active collectors from the backend
 // Handles fetching, parsing, and setting up collectors with the plugin
@@ -197,6 +201,55 @@ class CollectorService {
     }
 
     return success;
+  }
+
+  Future<bool> createAndSaveCollector(Map<String, dynamic> json, String description) async {
+    print(json);
+    try {
+      // Extract fields from the single entity
+      final String appPackage = json['packageName'] as String;
+      final String appName = json['packageName'] as String; // Fallback to packageName since no metadata
+      final String? name = json['text'] ?? json['contentDescription'] as String?;
+      final String className = json['className'] as String;
+      final String boundsInScreen = json['boundsInScreen'] as String;
+
+      // Create a single DataField if there is a name (text or contentDescription)
+      final List<DataField> dataFields = [];
+      if (name != null) {
+        // Construct graph query with package name, class name, and bounds
+        final List<String> predicates = [
+          '(HAS_PACKAGE_NAME $appPackage)',
+          '(HAS_CLASS_NAME $className)',
+          '(HAS_PARENT_LOCATION "$boundsInScreen")', // Using boundsInScreen as fallback
+        ];
+        final String graphQuery = '(conj ${predicates.join(' ')})';
+
+        dataFields.add(DataField(
+          dataFieldId: 0,
+          graphQuery: graphQuery,
+          name: name,
+        ));
+      }
+
+      // Create Collector instance
+      final collector = Collector(
+        collectorId: 1, // Assuming a default ID, adjust as needed
+        appName: appName,
+        appPackage: appPackage,
+        description: description,
+        dataFields: dataFields,
+      );
+
+      // Save collector to local device directory
+      final directory = await getApplicationDocumentsDirectory();
+      final collectorsDir = Directory('${directory.path}/collectors');
+      await collectorsDir.create(recursive: true); // Create directory recursively
+      await File('${collectorsDir.path}/${collector.collectorId}.json').writeAsString(jsonEncode(collector.toJson()));
+      return true;
+    } catch (e) {
+      print('Error creating collector: $e');
+      return false;
+    }
   }
 
   /// Test active collectors functionality - for testing/debugging

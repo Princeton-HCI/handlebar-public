@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logging/logging.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -20,7 +21,20 @@ void main() async {
   final requestHandler = RequestHandler();
   await requestHandler.initialize();
 
-  runApp(const HandlebarApp());
+  await SentryFlutter.init(
+        (options) {
+      options.dsn = 'https://b1bf91d053c22b79e77b7dd8f41a859b@o4506775983947776.ingest.us.sentry.io/4509967306850304';
+      options.environment = 'debug';
+      // Adds request headers and IP for users, for more info visit:
+      // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+      options.sendDefaultPii = true;
+    },
+    appRunner: () => runApp(
+      SentryWidget(
+        child: const HandlebarApp(),
+      ),
+    ),
+  );
 }
 
 class HandlebarApp extends StatefulWidget {
