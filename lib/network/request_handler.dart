@@ -39,12 +39,6 @@ class RequestHandler {
     log('🔧 Switched to Staging: $_stagingUrl', name: 'RequestHandler');
   }
 
-  static void toggleEnvironment() {
-    _useProduction = !_useProduction;
-    log('🔄 Toggled to $currentEnvironment: $apiBaseUrl',
-        name: 'RequestHandler');
-  }
-
   // Set up singleton instance of RequestHandler
   static final RequestHandler _requestHandler = RequestHandler._internal();
 
