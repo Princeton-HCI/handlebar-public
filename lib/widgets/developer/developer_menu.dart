@@ -126,7 +126,9 @@ class _DeveloperMenuContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _ApiEnvironmentPanel(onSwitchTo: _switchAPIEnvironment,),
+            _ApiEnvironmentPanel(
+              onSwitchTo: _switchAPIEnvironment,
+            ),
             const Divider(height: 30),
             _SnapshotRecordingPanel(
                 parentContext: parentContext,
@@ -202,7 +204,7 @@ class _ApiEnvironmentPanel extends StatelessWidget {
               // Switch to staging button
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed:  () => onSwitchTo('Staging'),
+                  onPressed: () => onSwitchTo('Staging'),
                   icon: const Icon(Icons.build),
                   label: const Text('Staging'),
                   style: ElevatedButton.styleFrom(

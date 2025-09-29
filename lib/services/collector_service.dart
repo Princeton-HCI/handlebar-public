@@ -203,13 +203,16 @@ class CollectorService {
     return success;
   }
 
-  Future<bool> createAndSaveCollector(Map<String, dynamic> json, String description) async {
+  Future<bool> createAndSaveCollector(
+      Map<String, dynamic> json, String description) async {
     print(json);
     try {
       // Extract fields from the single entity
       final String appPackage = json['packageName'] as String;
-      final String appName = json['packageName'] as String; // Fallback to packageName since no metadata
-      final String? name = json['text'] ?? json['contentDescription'] as String?;
+      final String appName = json['packageName']
+          as String; // Fallback to packageName since no metadata
+      final String? name =
+          json['text'] ?? json['contentDescription'] as String?;
       final String className = json['className'] as String;
       final String boundsInScreen = json['boundsInScreen'] as String;
 
@@ -243,8 +246,10 @@ class CollectorService {
       // Save collector to local device directory
       final directory = await getApplicationDocumentsDirectory();
       final collectorsDir = Directory('${directory.path}/collectors');
-      await collectorsDir.create(recursive: true); // Create directory recursively
-      await File('${collectorsDir.path}/${collector.collectorId}.json').writeAsString(jsonEncode(collector.toJson()));
+      await collectorsDir.create(
+          recursive: true); // Create directory recursively
+      await File('${collectorsDir.path}/${collector.collectorId}.json')
+          .writeAsString(jsonEncode(collector.toJson()));
       return true;
     } catch (e) {
       print('Error creating collector: $e');

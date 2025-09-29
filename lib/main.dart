@@ -2,6 +2,7 @@ import 'package:handlebar/navigation/navigation_router.dart';
 import 'package:handlebar/network/request_handler.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -22,9 +23,11 @@ void main() async {
   await requestHandler.initialize();
 
   await SentryFlutter.init(
-        (options) {
-      options.dsn = 'https://b1bf91d053c22b79e77b7dd8f41a859b@o4506775983947776.ingest.us.sentry.io/4509967306850304';
-      options.environment = 'debug';
+    (options) {
+      options.dsn =
+          'https://b1bf91d053c22b79e77b7dd8f41a859b@o4506775983947776.ingest.us.sentry.io/4509967306850304';
+      // Set environment based on Flutter build mode
+      options.environment = kDebugMode ? 'development' : 'production';
       // Adds request headers and IP for users, for more info visit:
       // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
       options.sendDefaultPii = true;

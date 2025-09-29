@@ -13,7 +13,8 @@ class ReplayUI extends StatelessWidget {
     return ListView(
       children: entities.map((entity) {
         final className = entity['className'] ?? '';
-        final label = entity['contentDescription'] ?? entity['text'] ?? className;
+        final label =
+            entity['contentDescription'] ?? entity['text'] ?? className;
 
         if (className.contains('Button')) {
           return ElevatedButton(
@@ -35,8 +36,10 @@ class ReplayUI extends StatelessWidget {
     );
   }
 
-  void _showDescriptionDialog(BuildContext context, Map<String, dynamic> entity) {
-    final TextEditingController _descriptionController = TextEditingController();
+  void _showDescriptionDialog(
+      BuildContext context, Map<String, dynamic> entity) {
+    final TextEditingController _descriptionController =
+        TextEditingController();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -58,7 +61,8 @@ class ReplayUI extends StatelessWidget {
                 final description = _descriptionController.text;
                 if (description.isNotEmpty) {
                   final collectorService = CollectorService();
-                  await collectorService.createAndSaveCollector(entity, description);
+                  await collectorService.createAndSaveCollector(
+                      entity, description);
                   Navigator.of(context).pop();
                 }
               },

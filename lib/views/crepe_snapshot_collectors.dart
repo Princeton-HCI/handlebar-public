@@ -15,7 +15,8 @@ class CrepeSnapshotCollectors extends StatefulWidget {
   const CrepeSnapshotCollectors({super.key});
 
   @override
-  State<CrepeSnapshotCollectors> createState() => _CrepeSnapshotCollectorsState();
+  State<CrepeSnapshotCollectors> createState() =>
+      _CrepeSnapshotCollectorsState();
 }
 
 class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
@@ -70,14 +71,14 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
                 ? const Center(child: Text("No snapshots loaded"))
                 : ReplayUI(snapshot: snapshots[_replayIndex]),
             AvailableCollectors(
-              collectors: collectors,
-              onToggle: (Collector collector, bool toggleValue) {
-                print(collector.dataFields);
-                setState(() {
-                  _debugToggleValue = toggleValue;
-                });
-              },
-              debugToggleValue: _debugToggleValue)
+                collectors: collectors,
+                onToggle: (Collector collector, bool toggleValue) {
+                  print(collector.dataFields);
+                  setState(() {
+                    _debugToggleValue = toggleValue;
+                  });
+                },
+                debugToggleValue: _debugToggleValue)
           ]),
           floatingActionButton: FloatingActionButton(
             child: Icon(Icons.folder_open),
@@ -120,7 +121,8 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
           if (file is File && file.path.endsWith('.json')) {
             final jsonString = await file.readAsString();
             final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
-            final collector = Collector.fromJson(jsonMap); // Assumes Collector.fromJson exists
+            final collector = Collector.fromJson(
+                jsonMap); // Assumes Collector.fromJson exists
             setState(() {
               collectors.add(collector);
             });
