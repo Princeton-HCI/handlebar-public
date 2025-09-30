@@ -205,7 +205,7 @@ class CollectorService {
 
   Future<bool> createAndSaveCollector(
       Map<String, dynamic> json, String description) async {
-    print(json);
+    log('Creating collector with data: $json');
     try {
       // Extract fields from the single entity
       final String appPackage = json['packageName'] as String;
@@ -252,7 +252,7 @@ class CollectorService {
           .writeAsString(jsonEncode(collector.toJson()));
       return true;
     } catch (e) {
-      print('Error creating collector: $e');
+      log('Error creating collector: $e');
       return false;
     }
   }

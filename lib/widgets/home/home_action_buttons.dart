@@ -90,7 +90,9 @@ class HomeActionButtons extends StatelessWidget {
         PlatformElevatedButton(
           onPressed: () async {
             await _testCollectors();
-            context.go('/replay-snapshot');
+            if (context.mounted) {
+              context.go('/replay-snapshot');
+            }
           },
           child: const Text('Replay Snapshot'),
         ),

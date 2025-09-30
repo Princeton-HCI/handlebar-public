@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
@@ -73,7 +74,7 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
             AvailableCollectors(
                 collectors: collectors,
                 onToggle: (Collector collector, bool toggleValue) {
-                  print(collector.dataFields);
+                  log('Collector toggled: ${collector.dataFields}');
                   setState(() {
                     _debugToggleValue = toggleValue;
                   });
@@ -130,7 +131,7 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
         }
       }
     } catch (e) {
-      print('Error loading collectors: $e');
+      log('Error loading collectors: $e');
     }
   }
 
@@ -151,7 +152,7 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
 
     List<Map<String, dynamic>> snapshots = [];
     for (final file in archive) {
-      print('Found: ${file.name}');
+      log('Found: ${file.name}');
     }
     for (final file in archive) {
       if (file.isFile && file.name.endsWith('.json')) {

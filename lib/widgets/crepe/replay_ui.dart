@@ -4,7 +4,7 @@ import 'package:handlebar/services/collector_service.dart';
 class ReplayUI extends StatelessWidget {
   final Map<String, dynamic> snapshot;
 
-  const ReplayUI({Key? key, required this.snapshot}) : super(key: key);
+  const ReplayUI({super.key, required this.snapshot});
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +38,14 @@ class ReplayUI extends StatelessWidget {
 
   void _showDescriptionDialog(
       BuildContext context, Map<String, dynamic> entity) {
-    final TextEditingController _descriptionController =
-        TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Enter Collector Description'),
           content: TextField(
-            controller: _descriptionController,
+            controller: descriptionController,
             decoration: InputDecoration(hintText: 'Description'),
           ),
           actions: [
@@ -58,12 +57,14 @@ class ReplayUI extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                final description = _descriptionController.text;
+                final description = descriptionController.text;
                 if (description.isNotEmpty) {
                   final collectorService = CollectorService();
                   await collectorService.createAndSaveCollector(
                       entity, description);
-                  Navigator.of(context).pop();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
                 }
               },
               child: Text('Save'),
