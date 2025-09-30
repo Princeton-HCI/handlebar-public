@@ -28,6 +28,9 @@ class UiSnapshotRecordingService {
 
   bool _isRecording = false;
   Timer? _recordingTimer;
+  Timer? _autoSaveTimer;
+  String? _lastAutoSavePath;
+  static const int _autoSaveIntervalSeconds = 10;
   final List<Map<String, dynamic>> _snapshots = [];
   DateTime? _recordingStartTime;
   DateTime? _recordingEndTime;
@@ -78,7 +81,14 @@ class UiSnapshotRecordingService {
         (_) => _captureSnapshot(),
       );
 
-      _logger.info('Recording started successfully');
+      // Start auto-save timer
+      _autoSaveTimer = Timer.periodic(
+        Duration(seconds: _autoSaveIntervalSeconds),
+        (_) => _performAutoSave(),
+      );
+
+      _logger.info(
+          'Recording started successfully with auto-save every $_autoSaveIntervalSeconds seconds');
       _notificationService.showSuccess('🔴 Recording started');
       return true;
     } catch (e) {
@@ -98,8 +108,16 @@ class UiSnapshotRecordingService {
 
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = null;
     _isRecording = false;
     _recordingEndTime = DateTime.now();
+
+    // Clean up auto-save file if it exists
+    if (_lastAutoSavePath != null) {
+      await _deleteAutoSaveFile(_lastAutoSavePath!);
+      _lastAutoSavePath = null;
+    }
 
     _recordingStateController.add(_isRecording);
 
@@ -217,7 +235,50 @@ class UiSnapshotRecordingService {
     };
   }
 
-  Future<String?> _saveToDownloads() async {
+  Future<void> _performAutoSave() async {
+    if (_snapshots.isEmpty || !_isRecording) return;
+
+    try {
+      _logger.info(
+          '🔄 Performing auto-save with ${_snapshots.length} snapshots...');
+
+      // Save with auto-save naming
+      final newAutoSavePath = await _saveToDownloads(isAutoSave: true);
+
+      if (newAutoSavePath != null) {
+        // Delete previous auto-save if it exists (in Downloads)
+        if (_lastAutoSavePath != null && _lastAutoSavePath != newAutoSavePath) {
+          // For files in Downloads, we need to use MediaStoreService to delete
+          await _deleteAutoSaveFile(_lastAutoSavePath!);
+        }
+
+        _lastAutoSavePath = newAutoSavePath;
+        _logger.info('💾 Auto-save successful: $newAutoSavePath');
+      } else {
+        _logger.warning('⚠️ Auto-save failed');
+      }
+    } catch (e) {
+      _logger.warning('⚠️ Error during auto-save: $e');
+      // Don't show error to user for auto-saves, just log it
+    }
+  }
+
+  Future<void> _deleteAutoSaveFile(String filePath) async {
+    try {
+      // Use MediaStoreService to delete recordings
+      final deleted = await MediaStoreService.deleteRecording(filePath);
+      if (deleted) {
+        _logger.info('🗑️ Deleted auto-save file: $filePath');
+      } else {
+        _logger.warning(
+            '⚠️ Auto-save file not found or already deleted: $filePath');
+      }
+    } catch (e) {
+      _logger.warning('⚠️ Failed to delete auto-save file: $e');
+    }
+  }
+
+  Future<String?> _saveToDownloads({bool isAutoSave = false}) async {
     _logger.info('💾 Starting save process...');
     try {
       if (_snapshots.isEmpty) {
@@ -226,7 +287,9 @@ class UiSnapshotRecordingService {
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'handlebar_ui_snapshots_$timestamp.zip';
+      final fileName = isAutoSave
+          ? 'handlebar_autosave_$timestamp.zip'
+          : 'handlebar_ui_snapshots_$timestamp.zip';
       _logger.info('📁 Creating ZIP file: $fileName');
 
       // Create temp file first
@@ -262,7 +325,7 @@ class UiSnapshotRecordingService {
 
       // Create ZIP file
       final zipEncoder = ZipEncoder();
-      final zipBytes = zipEncoder.encode(archive);
+      final List<int>? zipBytes = zipEncoder.encode(archive);
 
       if (zipBytes == null) {
         _logger.severe('❌ Failed to encode zip file');
@@ -274,7 +337,7 @@ class UiSnapshotRecordingService {
 
       // Save to temp file first
       final tempFile = File(tempFilePath);
-      await tempFile.writeAsBytes(zipBytes);
+      await tempFile.writeAsBytes(zipBytes, flush: true);
 
       // Verify temp file was created
       if (await tempFile.exists()) {
@@ -285,7 +348,20 @@ class UiSnapshotRecordingService {
         return null;
       }
 
-      // Save to app's recordings directory
+      // For auto-saves, save silently without sharing dialog
+      if (isAutoSave) {
+        final result =
+            await MediaStoreService.saveFileSilently(tempFilePath, fileName);
+        if (result != null) {
+          _logger.info('💾 Auto-save successful: $result');
+          return result;
+        } else {
+          _logger.warning('⚠️ Auto-save failed');
+          return null;
+        }
+      }
+
+      // For final saves, save and trigger sharing dialog
       _logger.info('🚀 Attempting to save to app recordings directory...');
       final result =
           await MediaStoreService.saveFileToDownloads(tempFilePath, fileName);
@@ -317,6 +393,7 @@ class UiSnapshotRecordingService {
 
   void dispose() {
     _recordingTimer?.cancel();
+    _autoSaveTimer?.cancel();
     _recordingStateController.close();
     _snapshotCountController.close();
   }
