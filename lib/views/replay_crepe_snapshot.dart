@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -6,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:handlebar/services/media_store_service.dart';
 import '../widgets/crepe_primitive_ui.dart';
+import '../widgets/playback_controls.dart';
 
 class ReplayCrepeSnapshot extends StatefulWidget {
   const ReplayCrepeSnapshot({super.key});
@@ -16,23 +18,144 @@ class ReplayCrepeSnapshot extends StatefulWidget {
 
 class _ReplayCrepeSnapshotState extends State<ReplayCrepeSnapshot> {
   List<Map<String, dynamic>> snapshots = [];
+  int currentIndex = 0;
+  bool isPlaying = false;
+  Timer? playbackTimer;
+  int? startTimestamp;
+  int? endTimestamp;
+
+  @override
+  void dispose() {
+    playbackTimer?.cancel();
+    super.dispose();
+  }
+
+  void _extractTimestamps() {
+    if (snapshots.isEmpty) return;
+
+    int? minTime;
+    int? maxTime;
+
+    for (final snapshot in snapshots) {
+      final timestamp = snapshot['captureTimestamp'] as int?;
+      if (timestamp != null) {
+        minTime = minTime == null
+            ? timestamp
+            : (timestamp < minTime ? timestamp : minTime);
+        maxTime = maxTime == null
+            ? timestamp
+            : (timestamp > maxTime ? timestamp : maxTime);
+      }
+    }
+
+    setState(() {
+      startTimestamp = minTime;
+      endTimestamp = maxTime;
+    });
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      isPlaying = !isPlaying;
+    });
+
+    if (isPlaying) {
+      playbackTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (currentIndex < snapshots.length - 1) {
+          setState(() {
+            currentIndex++;
+          });
+        } else {
+          setState(() {
+            isPlaying = false;
+            currentIndex = 0;
+          });
+          playbackTimer?.cancel();
+        }
+      });
+    } else {
+      playbackTimer?.cancel();
+    }
+  }
+
+  void _seekToIndex(int index) {
+    setState(() {
+      currentIndex = index.clamp(0, snapshots.length - 1);
+    });
+  }
+
+  void _onToggleView(bool isSnapshotView) {
+    // Placeholder for future video/snapshot toggle
+    log('View toggled to: ${isSnapshotView ? "Snapshot" : "Video"}');
+  }
+
+  int? _getCurrentTimestamp() {
+    if (snapshots.isEmpty || currentIndex >= snapshots.length) return null;
+    return snapshots[currentIndex]['captureTimestamp'] as int?;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Crepe UI Snapshot')),
+      appBar: AppBar(title: const Text('Crepe UI Snapshot Replay')),
       body: snapshots.isEmpty
-          ? Center(child: Text('No UI loaded'))
-          : PageView(
-              children: snapshots.map((s) => crepePrimitiveUI(s)).toList(),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.folder_open, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('No snapshots loaded'),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.folder_open),
+                    label: const Text('Load Recording'),
+                    onPressed: () async {
+                      final loaded = await pickFile();
+                      setState(() {
+                        snapshots = loaded;
+                        currentIndex = 0;
+                      });
+                      _extractTimestamps();
+                    },
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: crepePrimitiveUI(snapshots[currentIndex]),
+                ),
+                PlaybackControls(
+                  currentIndex: currentIndex,
+                  totalSnapshots: snapshots.length,
+                  isPlaying: isPlaying,
+                  onSeek: _seekToIndex,
+                  onPlayPause: _togglePlayPause,
+                  onToggleView: _onToggleView,
+                  showVideoToggle: true,
+                  startTimestamp: startTimestamp,
+                  endTimestamp: endTimestamp,
+                  currentTimestamp: _getCurrentTimestamp(),
+                ),
+              ],
             ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.folder_open),
-        onPressed: () async {
-          final loaded = await pickFile();
-          setState(() => snapshots = loaded);
-        },
-      ),
+      floatingActionButton: snapshots.isNotEmpty
+          ? FloatingActionButton(
+              child: const Icon(Icons.folder_open),
+              onPressed: () async {
+                final loaded = await pickFile();
+                setState(() {
+                  snapshots = loaded;
+                  currentIndex = 0;
+                  isPlaying = false;
+                });
+                playbackTimer?.cancel();
+                _extractTimestamps();
+              },
+            )
+          : null,
     );
   }
 

@@ -9,6 +9,7 @@ import 'package:handlebar/services/collector_service.dart';
 import 'package:handlebar/services/media_store_service.dart';
 import 'package:handlebar/widgets/crepe/available_collectors.dart';
 import 'package:handlebar/widgets/crepe/replay_ui.dart';
+import 'package:handlebar/widgets/playback_controls.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/collector.dart';
 
@@ -22,11 +23,14 @@ class CrepeSnapshotCollectors extends StatefulWidget {
 
 class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
   CollectorService collectorService = CollectorService();
-  Timer? _timer;
+  Timer? _playbackTimer;
   List<Map<String, dynamic>> snapshots = [];
   List<Collector> collectors = [];
   int _replayIndex = 0;
   bool _debugToggleValue = false;
+  bool _isPlaying = false;
+  int? _startTimestamp;
+  int? _endTimestamp;
 
   @override
   void initState() {
@@ -35,21 +39,76 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
 
     // Load collectors from the directory
     _loadCollectorsFromDirectory();
-
-    // Advance snapshot every 1 second
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && snapshots.isNotEmpty) {
-        setState(() {
-          _replayIndex = (_replayIndex + 1) % snapshots.length;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _playbackTimer?.cancel();
     super.dispose();
+  }
+
+  void _extractTimestamps() {
+    if (snapshots.isEmpty) return;
+
+    int? minTime;
+    int? maxTime;
+
+    for (final snapshot in snapshots) {
+      final timestamp = snapshot['captureTimestamp'] as int?;
+      if (timestamp != null) {
+        minTime = minTime == null
+            ? timestamp
+            : (timestamp < minTime ? timestamp : minTime);
+        maxTime = maxTime == null
+            ? timestamp
+            : (timestamp > maxTime ? timestamp : maxTime);
+      }
+    }
+
+    setState(() {
+      _startTimestamp = minTime;
+      _endTimestamp = maxTime;
+    });
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+
+    if (_isPlaying) {
+      _playbackTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (_replayIndex < snapshots.length - 1) {
+          setState(() {
+            _replayIndex++;
+          });
+        } else {
+          setState(() {
+            _isPlaying = false;
+            _replayIndex = 0;
+          });
+          _playbackTimer?.cancel();
+        }
+      });
+    } else {
+      _playbackTimer?.cancel();
+    }
+  }
+
+  void _seekToIndex(int index) {
+    setState(() {
+      _replayIndex = index.clamp(0, snapshots.length - 1);
+    });
+  }
+
+  void _onToggleView(bool isSnapshotView) {
+    // Placeholder for future video/snapshot toggle
+    print('View toggled to: ${isSnapshotView ? "Snapshot" : "Video"}');
+  }
+
+  int? _getCurrentTimestamp() {
+    if (snapshots.isEmpty || _replayIndex >= snapshots.length) return null;
+    return snapshots[_replayIndex]['captureTimestamp'] as int?;
   }
 
   @override
@@ -67,10 +126,28 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
             ]),
           ),
           body: TabBarView(children: <Widget>[
-            // Tab 1 → replay snapshots automatically
+            // Tab 1 → replay snapshots with controls
             snapshots.isEmpty
                 ? const Center(child: Text("No snapshots loaded"))
-                : ReplayUI(snapshot: snapshots[_replayIndex]),
+                : Column(
+                    children: [
+                      Expanded(
+                        child: ReplayUI(snapshot: snapshots[_replayIndex]),
+                      ),
+                      PlaybackControls(
+                        currentIndex: _replayIndex,
+                        totalSnapshots: snapshots.length,
+                        isPlaying: _isPlaying,
+                        onSeek: _seekToIndex,
+                        onPlayPause: _togglePlayPause,
+                        onToggleView: _onToggleView,
+                        showVideoToggle: true,
+                        startTimestamp: _startTimestamp,
+                        endTimestamp: _endTimestamp,
+                        currentTimestamp: _getCurrentTimestamp(),
+                      ),
+                    ],
+                  ),
             AvailableCollectors(
                 collectors: collectors,
                 onToggle: (Collector collector, bool toggleValue) {
@@ -85,7 +162,13 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
             child: Icon(Icons.folder_open),
             onPressed: () async {
               final loaded = await pickFile();
-              setState(() => snapshots = loaded);
+              setState(() {
+                snapshots = loaded;
+                _replayIndex = 0;
+                _isPlaying = false;
+              });
+              _playbackTimer?.cancel();
+              _extractTimestamps();
             },
           ),
         ));
