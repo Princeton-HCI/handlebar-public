@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
+import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:handlebar/services/media_store_service.dart';
 import 'package:handlebar/services/recording_preferences_service.dart';
@@ -220,6 +221,19 @@ class UiSnapshotRecordingService {
       _logger.warning('Failed to get device info: $e');
     }
 
+    // Get screen dimensions
+    int screenHeight;
+    int screenWidth;
+    try {
+      final view = WidgetsBinding.instance.platformDispatcher.views.first;
+      final physicalSize = view.physicalSize;
+      screenHeight = physicalSize.height.toInt();
+      screenWidth = physicalSize.width.toInt();
+    } catch (e) {
+      _logger.severe('Failed to get screen dimensions: $e');
+      throw Exception('Failed to get screen dimensions: $e');
+    }
+
     return {
       'startTime': _recordingStartTime?.toIso8601String(),
       'endTime': _recordingEndTime?.toIso8601String() ??
@@ -232,6 +246,8 @@ class UiSnapshotRecordingService {
       'deviceModel': deviceModel,
       'androidVersion': androidVersion,
       'manufacturer': manufacturer,
+      'screenHeight': screenHeight,
+      'screenWidth': screenWidth,
     };
   }
 

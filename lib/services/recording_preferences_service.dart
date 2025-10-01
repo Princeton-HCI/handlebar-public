@@ -57,12 +57,12 @@ class RecordingPreferencesService {
     if (_prefs == null) {
       throw StateError('RecordingPreferencesService not initialized');
     }
-    return _prefs!.getInt(_maxSnapshotsKey) ?? 1200;
+    return _prefs!.getInt(_maxSnapshotsKey) ?? 10800;
   }
 
   Future<void> setMaxSnapshots(int max) async {
-    if (max < 10 || max > 1200) {
-      debugPrint('Invalid max snapshots: $max. Must be between 10 and 1200.');
+    if (max < 10 || max > 10800) {
+      debugPrint('Invalid max snapshots: $max. Must be between 10 and 10800.');
       return;
     }
     if (_prefs == null) {

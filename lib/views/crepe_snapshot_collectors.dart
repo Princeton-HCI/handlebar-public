@@ -103,7 +103,7 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
 
   void _onToggleView(bool isSnapshotView) {
     // Placeholder for future video/snapshot toggle
-    print('View toggled to: ${isSnapshotView ? "Snapshot" : "Video"}');
+    log('View toggled to: ${isSnapshotView ? "Snapshot" : "Video"}');
   }
 
   int? _getCurrentTimestamp() {

@@ -13,7 +13,7 @@ class PlaybackControls extends StatefulWidget {
   final int? currentTimestamp;
 
   const PlaybackControls({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.totalSnapshots,
     required this.isPlaying,
@@ -24,7 +24,7 @@ class PlaybackControls extends StatefulWidget {
     this.startTimestamp,
     this.endTimestamp,
     this.currentTimestamp,
-  }) : super(key: key);
+  });
 
   @override
   State<PlaybackControls> createState() => _PlaybackControlsState();
