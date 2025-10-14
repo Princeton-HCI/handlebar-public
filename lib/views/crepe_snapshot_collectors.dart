@@ -9,6 +9,7 @@ import 'package:handlebar/services/collector_service.dart';
 import 'package:handlebar/services/media_store_service.dart';
 import 'package:handlebar/widgets/crepe/available_collectors.dart';
 import 'package:handlebar/widgets/crepe/replay_ui.dart';
+import 'package:handlebar/widgets/crepe/screen_recording_viewer.dart';
 import 'package:handlebar/widgets/playback_controls.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/collector.dart';
@@ -129,7 +130,8 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
             // Tab 1 → replay snapshots with controls
             snapshots.isEmpty
                 ? const Center(child: Text("No snapshots loaded"))
-                : Column(
+                : ScreenRecordingViewer(snapshots: snapshots, collectors: collectors,),
+            /*Column(
                     children: [
                       Expanded(
                         child: ReplayUI(snapshot: snapshots[_replayIndex]),
@@ -147,7 +149,7 @@ class _CrepeSnapshotCollectorsState extends State<CrepeSnapshotCollectors> {
                         currentTimestamp: _getCurrentTimestamp(),
                       ),
                     ],
-                  ),
+                  ),*/
             AvailableCollectors(
                 collectors: collectors,
                 onToggle: (Collector collector, bool toggleValue) {
