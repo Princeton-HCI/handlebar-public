@@ -6,7 +6,7 @@ repos:
         entry: dart
         language: system
         types: [dart]
-        args: ["format", "--output=none", "--set-exit-if-changed"]
+        args: ["format", "--set-exit-if-changed"]
         exclude: crepe-flutter-plugin
 
       - id: flutter-analyze
