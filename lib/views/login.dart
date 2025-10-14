@@ -1,12 +1,19 @@
-import 'package:handlebar/network/request_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:handlebar/widgets/login/auth_button.dart';
-import 'package:handlebar/widgets/login/email_text_field.dart';
-import 'package:handlebar/widgets/login/forgot_password_link.dart';
-import 'package:handlebar/widgets/login/login_error_display.dart';
-import 'package:handlebar/widgets/login/login_header.dart';
-import 'package:handlebar/widgets/login/password_text_field.dart';
+import 'package:handlebar/widgets/common/inputs/interaction_blocker.dart';
+import 'package:url_launcher/link.dart';
+
+import 'package:handlebar/design-system/spacing.dart';
+import 'package:handlebar/extensions/context_extensions.dart';
+import 'package:handlebar/network/request_handler.dart';
+import 'package:handlebar/utils/validators.dart';
+import 'package:handlebar/widgets/common/handlebar_segment_group.dart';
+import 'package:handlebar/widgets/common/inputs/handlebar_button.dart';
+
+import '../widgets/common/inputs/handlebar_text_field.dart';
+import '../widgets/common/static_responsive_scaffold.dart';
+
+enum _AuthMode { login, signup }
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -17,13 +24,14 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final RequestHandler requestHandler = RequestHandler();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  _AuthMode _mode = _AuthMode.login;
   bool _isLoading = false;
-  bool _isCreatingUser = false;
   String? _errorMessage;
+  bool _showPassword = false;
 
   @override
   void initState() {
@@ -33,8 +41,8 @@ class _LoginState extends State<Login> {
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -54,8 +62,8 @@ class _LoginState extends State<Login> {
 
     try {
       final result = await requestHandler.requestSession(
-        emailController.text.trim(),
-        passwordController.text,
+        _emailController.text.trim(),
+        _passwordController.text,
       );
 
       if (mounted) {
@@ -90,14 +98,14 @@ class _LoginState extends State<Login> {
     }
 
     setState(() {
-      _isCreatingUser = true;
+      _isLoading = true;
       _errorMessage = null;
     });
 
     try {
       final result = await requestHandler.requestNewUser(
-        emailController.text.trim(),
-        passwordController.text,
+        _emailController.text.trim(),
+        _passwordController.text,
         referralCode: null,
       );
 
@@ -122,7 +130,7 @@ class _LoginState extends State<Login> {
     } finally {
       if (mounted) {
         setState(() {
-          _isCreatingUser = false;
+          _isLoading = false;
         });
       }
     }
@@ -138,70 +146,227 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  LoginHeader(),
-
-                  const SizedBox(height: 40),
-
-                  if (_errorMessage != null) ...[
-                    LoginErrorDisplay(
-                      errorMessage: _errorMessage,
-                      onDismiss: _clearError,
-                    )
-                  ],
-
-                  EmailTextField(
-                      emailController: emailController,
-                      onChanged: (_) => _clearError()),
-
-                  const SizedBox(height: 16),
-
-                  PasswordTextField(
-                      passwordController: passwordController,
-                      onChanged: (_) => _clearError()),
-
-                  const SizedBox(height: 24),
-
-                  ForgotPasswordLink(),
-
-                  const SizedBox(height: 24),
-
-                  // Login button
-                  AuthButton(
-                    isLoading: _isLoading,
-                    loadingText: "Logging in...",
-                    onPressed:
-                        (_isLoading || _isCreatingUser) ? null : _handleLogin,
-                    text: "Login",
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Register button
-                  AuthButton(
-                      isLoading: _isCreatingUser,
-                      loadingText: "Creating account...",
-                      onPressed: (_isLoading || _isCreatingUser)
-                          ? null
-                          : _handleCreateUser,
-                      text: "Sign Up"),
-
-                  const SizedBox(height: 60),
+    return StaticResponsiveScaffold(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Spacing.vSpace48,
+          _LoginHeader(),
+          Spacing.vSpace32,
+          InteractionBlocker(
+              isBlocked: _isLoading,
+              child: Column(children: [
+                SizedBox(
+                    width: context.scaled(Spacing.token288),
+                    child: HandlebarSegmentGroup(
+                      index: _mode == _AuthMode.login ? 0 : 1,
+                      tabs: const ["Login", "Sign Up"],
+                      minHeight: Spacing.token56,
+                      onPressed: (index) => setState(() {
+                        _mode = index == 0 ? _AuthMode.login : _AuthMode.signup;
+                        _formKey.currentState?.reset();
+                        _emailController.clear();
+                        _passwordController.clear();
+                        _showPassword = false;
+                        _clearError();
+                      }),
+                    )),
+                Spacing.vSpace24,
+                if (_errorMessage != null) ...[
+                  _LoginErrorDisplay(
+                    errorMessage: _errorMessage,
+                    onDismiss: _clearError,
+                  )
                 ],
+                _LoginForm(
+                  formKey: _formKey,
+                  mode: _mode,
+                  emailController: _emailController,
+                  passwordController: _passwordController,
+                  showPassword: _showPassword,
+                  onTogglePassword: () =>
+                      setState(() => _showPassword = !_showPassword),
+                  clearError: _clearError,
+                ),
+                if (_mode == _AuthMode.login) ...[
+                  Spacing.vSpace24,
+                  _ForgotPasswordLink(),
+                ]
+              ])),
+          Spacing.vSpace24,
+          SizedBox(
+            width: context.scaled(Spacing.token256),
+            child: HandlebarButton(
+                text: _mode == _AuthMode.login ? "Login" : "Sign Up",
+                variant: ButtonVariant.primary,
+                isLoading: _isLoading,
+                minHeight: Spacing.token40,
+                loadingText: _mode == _AuthMode.login
+                    ? "Logging in..."
+                    : "Creating account...",
+                onPressed: _isLoading
+                    ? null
+                    : (_mode == _AuthMode.login)
+                        ? _handleLogin
+                        : _handleCreateUser),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+/// A Widget for displaying the login logo and welcome text
+class _LoginHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Image.asset(
+        'assets/logo-small.png',
+        height: 120,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.directions_car,
+            size: 120,
+            color: Colors.blue,
+          );
+        },
+      ),
+      Spacing.vSpace40,
+      Text("Welcome to Handlebar!", style: context.headlineLarge),
+      Spacing.vSpace8,
+      Text("Login or Sign Up Below", style: context.headlineSmall),
+    ]);
+  }
+}
+
+/// A Widget for displaying the login form fields
+class _LoginForm extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final _AuthMode mode;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final bool showPassword;
+  final VoidCallback onTogglePassword;
+  final VoidCallback clearError;
+
+  const _LoginForm({
+    required this.formKey,
+    required this.mode,
+    required this.emailController,
+    required this.passwordController,
+    required this.showPassword,
+    required this.onTogglePassword,
+    required this.clearError,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          HandlebarTextField(
+            controller: emailController,
+            hint: "Enter your email",
+            inputType: TextInputType.emailAddress,
+            isObscured: false,
+            prefix: const Icon(Icons.email),
+            onChanged: (_) => clearError(),
+            validator: Validators.email,
+          ),
+          Spacing.vSpace24,
+          HandlebarTextField(
+            controller: passwordController,
+            hint: "Enter your password",
+            isObscured: !showPassword,
+            prefix: const Icon(Icons.lock),
+            suffix: IconButton(
+              onPressed: onTogglePassword,
+              icon:
+                  Icon(showPassword ? Icons.visibility_off : Icons.visibility),
+            ),
+            onChanged: (_) => clearError(),
+            validator: Validators.password,
+          ),
+          if (mode == _AuthMode.signup) ...[
+            Spacing.vSpace24,
+            HandlebarTextField(
+              controller: passwordController,
+              hint: "Enter your researcher ID (optional)",
+              isEnabled: false,
+              isObscured: true,
+              prefix: const Icon(Icons.perm_identity),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+}
+
+/// A text link Widget for navigating to the forgot password page from the login screen
+class _ForgotPasswordLink extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Link(
+      uri: Uri.parse('https://www.driversseat.co/contact'),
+      builder: (BuildContext context, FollowLink? followLink) => TextButton(
+        onPressed: followLink,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 0),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        child: const Text('Forgot Password?',
+            style: TextStyle(fontStyle: FontStyle.italic)),
+      ),
+    );
+  }
+}
+
+/// A banner Widget for displaying login/registration errors
+class _LoginErrorDisplay extends StatelessWidget {
+  final String? errorMessage;
+  final VoidCallback? onDismiss;
+
+  const _LoginErrorDisplay({this.errorMessage, this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.token16, vertical: Spacing.token8),
+      margin: const EdgeInsets.only(bottom: Spacing.token24),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        border: Border.all(color: scheme.error),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: scheme.onErrorContainer),
+          Spacing.hSpace16,
+          Expanded(
+            child: Text(
+              errorMessage!,
+              style: TextStyle(
+                color: scheme.onErrorContainer,
+                fontSize: 14,
               ),
             ),
           ),
-        ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: onDismiss,
+            color: scheme.onErrorContainer,
+            iconSize: 20,
+          ),
+        ],
       ),
     );
   }
