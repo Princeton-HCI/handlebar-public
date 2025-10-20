@@ -56,7 +56,10 @@ dependencies:
   logging: ^1.2.0
   sentry_flutter: ^9.6.0
   video_player: ^2.10.0
-  #flutter_screen_recording: ^2.0.16
+  flutter_screen_recording:
+    git:
+      url: https://github.com/Princeton-HCI/flutter_screen_recording.git
+      path: flutter_screen_recording
 
 dev_dependencies:
   flutter_test:
