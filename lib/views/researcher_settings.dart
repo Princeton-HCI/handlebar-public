@@ -1,0 +1,628 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:handlebar/view_models/video_session_view_model.dart';
+import 'package:handlebar/widgets/common/handlebar_app_bar.dart';
+import 'package:handlebar/widgets/common/handlebar_segment_group.dart';
+import 'package:handlebar/widgets/common/buttons/handlebar_button.dart';
+import 'package:handlebar/widgets/common/buttons/handlebar_icon_button.dart';
+import 'package:handlebar/widgets/common/static_responsive_scaffold.dart';
+import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
+
+import '../design-system/spacing.dart';
+import '../extensions/context_extensions.dart';
+import '../services/notification_service.dart';
+
+/// Top-level widget for the Researcher Settings screen
+class ResearcherSettings extends StatelessWidget {
+  const ResearcherSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Provide VideoSessionViewModel to all children
+    return ChangeNotifierProvider(
+        create: (_) => VideoSessionViewModel(),
+        child: const _ResearcherSettingsContainer());
+  }
+}
+
+/// Main stateful widget for the Researcher Settings screen that builds the UI
+class _ResearcherSettingsContainer extends StatefulWidget {
+  const _ResearcherSettingsContainer();
+
+  @override
+  State<_ResearcherSettingsContainer> createState() =>
+      _ResearcherSettingsContainerState();
+}
+
+class _ResearcherSettingsContainerState
+    extends State<_ResearcherSettingsContainer> {
+  int _selectedTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    context
+        .read<VideoSessionViewModel>()
+        .errorMessage
+        .addListener(_showErrorNotification);
+  }
+
+  @override
+  void dispose() {
+    context
+        .read<VideoSessionViewModel>()
+        .errorMessage
+        .removeListener(_showErrorNotification);
+    super.dispose();
+  }
+
+  static final _videoPlayerWidth = Spacing.token288;
+  static final _exitIconWidth = Spacing.token32;
+
+  void _showErrorNotification() {
+    final vm = context.read<VideoSessionViewModel>();
+    final message = vm.errorMessage.value;
+
+    if (message != null) {
+      NotificationService().showError(message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    NotificationService().setContext(context);
+    final vm = context.watch<VideoSessionViewModel>();
+
+    final placeholderChild = SizedBox(
+      width: Spacing.token288,
+      child: _UploadPlaceholder(
+          onUpload: () => context
+              .read<VideoSessionViewModel>()
+              .loadVideoAndInitializeSession()),
+    );
+
+    final loadingChild = SizedBox(
+      width: _videoPlayerWidth,
+      child: const AspectRatio(
+        aspectRatio: 9 / 16,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+
+    final videoChild = ValueListenableBuilder<bool>(
+      valueListenable: vm.isInitialized,
+      builder: (context, isInitialized, _) {
+        if (isInitialized) {
+          // Video fully initialized, display player and playback controls
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: _videoPlayerWidth,
+                child: Stack(
+                  children: [
+                    // Video player
+                    Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: _videoPlayerWidth,
+                        child: const _VideoPlayerContainer(),
+                      ),
+                    ),
+                    // Exit button
+                    Align(
+                        alignment: Alignment.topRight,
+                        child: Transform.translate(
+                          offset:
+                              Offset(_exitIconWidth / 2, -_exitIconWidth / 2),
+                          child: HandlebarIconButton(
+                            icon: Icons.close_rounded,
+                            iconSize: _exitIconWidth,
+                            onPressed: vm.unloadVideoSession,
+                          ),
+                        ))
+                  ],
+                ),
+              ),
+              Spacing.vSpace16,
+              SizedBox(
+                width: context.scaled(Spacing.token352),
+                child: _VideoPlaybackControls(),
+              )
+            ],
+          );
+        } else {
+          // Video not fully initialized, display loading indicator
+          return SizedBox(
+            width: context.scaled(_videoPlayerWidth),
+            child: const AspectRatio(
+              aspectRatio: 9 / 16,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+      },
+    );
+
+    return StaticResponsiveScaffold(
+        appBar: HandlebarAppBar(
+            title: "Researcher Settings", onReturn: () => context.go('/')),
+        child: ValueListenableBuilder<bool>(
+            valueListenable: vm.isLoading,
+            builder: (context, isLoading, _) {
+              return Column(
+                children: [
+                  SizedBox(
+                      width: context.scaled(Spacing.token352),
+                      child: HandlebarSegmentGroup(
+                        index: _selectedTab,
+                        tabs: const ["View Recording", "Set Up Collectors"],
+                        onPressed: (i) => setState(() {
+                          _selectedTab = i;
+                        }),
+                        minHeight: Spacing.token56,
+                      )),
+                  Spacing.vSpace24,
+                  if (_selectedTab == 0)
+                    if (isLoading)
+                      loadingChild
+                    else if (vm.isInitialized.value)
+                      videoChild
+                    else
+                      placeholderChild
+                  else
+                    const Text("Collector setup coming soon..."),
+                ],
+              );
+            }));
+  }
+}
+
+/// A placeholder widget shown when no video has loaded yet
+class _UploadPlaceholder extends StatelessWidget {
+  final VoidCallback onUpload;
+
+  const _UploadPlaceholder({required this.onUpload});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        HandlebarButton(
+          text: "Upload Screen Recording",
+          variant: ButtonVariant.primary,
+          isLoading: false,
+          onPressed: onUpload,
+          prefixIcon: const Icon(Icons.drive_folder_upload_outlined,
+              size: Spacing.token32),
+        ),
+        Spacing.hSpace16,
+        HandlebarIconButton(
+          icon: Icons.info_outline_rounded,
+          iconSize: Spacing.token32,
+          dialogText:
+              "Upload a ZIP file generated by Handlebar’s built-in recorder. The recording will be analyzed to identify "
+              "UI elements for data collection.",
+        ),
+      ],
+    );
+  }
+}
+
+/// A simple container widget that groups the video player and collector overlay
+class _VideoPlayerContainer extends StatelessWidget {
+  const _VideoPlayerContainer();
+
+  double determinePortraitAspectRatio(double originalAspectRatio) {
+    if (originalAspectRatio > 1.0) {
+      // Landscape video, flip ratio to make portrait
+      return 1 / originalAspectRatio;
+    } else {
+      // Already portrait video, use directly
+      return originalAspectRatio;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<VideoSessionViewModel>();
+    final controller = vm.videoController!;
+    final displayAspectRatio =
+        determinePortraitAspectRatio(controller.value.aspectRatio);
+
+    return AspectRatio(
+      aspectRatio: displayAspectRatio,
+      child: Container(
+        color: Colors.black,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final videoSize = controller.value.size;
+
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Video player
+                FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: videoSize.width,
+                    height: videoSize.height,
+                    child: VideoPlayer(controller),
+                  ),
+                ),
+
+                // Collector overlay
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// A widget that groups all video control UI elements together, including
+/// the timeline, time/snapshot info, and playback buttons
+class _VideoPlaybackControls extends StatelessWidget {
+  const _VideoPlaybackControls();
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<VideoSessionViewModel>();
+    final controller = vm.videoController!;
+    const double controlRowHeight = 56.0;
+
+    // Display toggle between snapshot and smooth mode
+    final modeToggleButton = ValueListenableBuilder<bool>(
+      valueListenable: vm.isSnapshotMode,
+      builder: (context, isSnapshotMode, _) {
+        return InkWell(
+          onTap: vm.toggleMode,
+          borderRadius: BorderRadius.circular(Spacing.token8),
+          child: Padding(
+              padding: EdgeInsetsGeometry.all(4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isSnapshotMode
+                        ? Icons.videocam_outlined
+                        : Icons.phone_android_outlined,
+                    size: Spacing.token24,
+                  ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        // Invisible text so both modes have same center
+                        opacity: 0.0,
+                        child: Text('Snapshot', style: context.bodySmall),
+                      ),
+                      Text(
+                        isSnapshotMode ? 'Video' : 'Snapshot',
+                        style: context.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              )),
+        );
+      },
+    );
+
+    // Displays snapshot counter and video progress timer
+    final infoColumn = AnimatedBuilder(
+        animation: Listenable.merge([vm.currSnapshotIndex, controller]),
+        builder: (context, _) => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (vm.snapshots.isNotEmpty)
+                  Text(
+                    'Snapshot ${vm.currSnapshotIndex.value + 1} of ${vm.snapshots.length}',
+                    style: context.bodySmall,
+                  ),
+                Text(
+                  '${_formatDuration(controller.value.position)} / ${_formatDuration(controller.value.duration)}',
+                  style: context.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.token16),
+          child: SizedBox(
+            height: controlRowHeight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Text info
+                Expanded(
+                  child: infoColumn,
+                ),
+
+                // Toggle button
+                Transform.translate(
+                  offset: const Offset(0, -3),
+                  child: modeToggleButton,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Spacing.vSpace8,
+        const _VideoTimelineSlider(),
+        Spacing.vSpace8,
+        const _PlaybackButtons(),
+      ],
+    );
+  }
+}
+
+/// The interactive timeline widget with thumbnails responsible for
+/// displaying playback progress and handling user scrubbing gestures
+class _VideoTimelineSlider extends StatelessWidget {
+  const _VideoTimelineSlider();
+
+  static const double timelineHeight = 50.0;
+  static const borderWidth = 1.6;
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<VideoSessionViewModel>();
+    final double videoDurationSecs =
+        vm.videoController!.value.duration.inMilliseconds / 1000.0;
+
+    // No timeline for second duration video
+    if (videoDurationSecs <= 0) {
+      return const SizedBox(height: timelineHeight);
+    }
+
+    // Store static constants for timeline from the viewmodel
+    final intervalSeconds = VideoSessionViewModel.intervalSeconds;
+    final thumbnailWidth = VideoSessionViewModel.thumbnailWidth;
+    final pixelsPerSecond = VideoSessionViewModel.pixelsPerSecond;
+
+    final int numberOfThumbnails = (videoDurationSecs / intervalSeconds).ceil();
+
+    // Handle edge case where last thumbnail must be cut off due to shorter video length
+    double lastThumbnailDurationSecs = videoDurationSecs % intervalSeconds;
+    if (lastThumbnailDurationSecs == 0.0) {
+      lastThumbnailDurationSecs = intervalSeconds.toDouble();
+    }
+    final double lastThumbnailWidth =
+        lastThumbnailDurationSecs * pixelsPerSecond;
+    final double totalContentWidth =
+        (numberOfThumbnails - 1) * thumbnailWidth + lastThumbnailWidth;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double viewportWidth = constraints.maxWidth;
+        final double horizontalPadding = viewportWidth / 2;
+        final borderSide = BorderSide(
+            color: context.colorScheme.onSurface, width: borderWidth);
+
+        final timeline = ListView.builder(
+          controller: vm.timelineScrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
+          itemCount: numberOfThumbnails + 2,
+          itemBuilder: (context, index) {
+            if (index == 0 || index == numberOfThumbnails + 1) {
+              // Render padding at the start and end of the list
+              return SizedBox(width: horizontalPadding);
+            }
+
+            final thumbIndex = index - 1;
+            final bool isLast = thumbIndex == numberOfThumbnails - 1;
+
+            // Last thumbnail needs dynamic width for it to not be longer than video
+            final double currentWidth =
+                isLast ? lastThumbnailWidth : thumbnailWidth;
+            final time =
+                Duration(seconds: (thumbIndex * intervalSeconds).round());
+
+            return Container(
+              width: currentWidth,
+              height: timelineHeight,
+              decoration: BoxDecoration(
+                border: Border(
+                  top: borderSide,
+                  bottom: borderSide,
+                  left: thumbIndex == 0 ? borderSide : BorderSide.none,
+                  right: isLast ? borderSide : BorderSide.none,
+                ),
+              ),
+              child: _ThumbnailImage(time: time),
+            );
+          },
+        );
+
+        return ValueListenableBuilder<Duration>(
+          valueListenable: vm.playhead,
+          builder: (context, playheadDuration, child) {
+            if (!vm.isUserScrubbing.value) {
+              // Find how much to move timeline scroll by
+              final targetOffset =
+                  (playheadDuration.inMilliseconds / 1000.0) * pixelsPerSecond;
+              final clampedOffset = targetOffset.clamp(0.0, totalContentWidth);
+
+              if (vm.isSnapshotMode.value) {
+                vm.timelineScrollController.animateTo(
+                  clampedOffset,
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOut,
+                );
+              } else {
+                vm.timelineScrollController.animateTo(
+                  clampedOffset,
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.linear,
+                );
+              }
+            }
+            return child!;
+          },
+          child: SizedBox(
+            height: timelineHeight,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                if (n is ScrollStartNotification && n.dragDetails != null) {
+                  vm.onTimelineScrollStart();
+                } else if (n is ScrollEndNotification) {
+                  vm.onTimelineScrollEnd(n.metrics.pixels);
+                }
+                return false;
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  timeline,
+                  // Playhead vertical line
+                  Container(
+                      width: 3,
+                      height: timelineHeight,
+                      color: Colors.redAccent),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The widget for displaying a single thumbnail image in the timeline
+class _ThumbnailImage extends StatelessWidget {
+  final Duration time;
+  const _ThumbnailImage({required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<VideoSessionViewModel>();
+
+    return ValueListenableBuilder<Map<Duration, Uint8List>>(
+      valueListenable: vm.thumbnails,
+      builder: (context, thumbsMap, child) {
+        if (thumbsMap.containsKey(time)) {
+          // Our specific thumbnail exists in the map, display it
+          return Image.memory(
+            thumbsMap[time]!,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          );
+        }
+        // Thumbnail does not yet exist, show a placeholder
+        return Container(color: Colors.grey.shade800);
+      },
+    );
+  }
+}
+
+/// Renders the main playback buttons (play/pause, seek) and
+/// dynamically switches between controls for snapshot and smooth mode
+class _PlaybackButtons extends StatelessWidget {
+  const _PlaybackButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.read<VideoSessionViewModel>();
+    final colorScheme = context.colorScheme;
+
+    Widget createIconButton(Icon icon, VoidCallback? onPressed,
+        {double iconSize = Spacing.token40}) {
+      return IconButton(
+        icon: icon,
+        onPressed: onPressed,
+        color: colorScheme.onSurface,
+        iconSize: iconSize,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        viewModel.isPlaying,
+        viewModel.isSnapshotMode,
+      ]),
+      builder: (context, _) {
+        Widget playPause = createIconButton(
+          Icon(viewModel.isPlaying.value
+              ? Icons.pause_circle_filled
+              : Icons.play_circle_filled),
+          viewModel.togglePlayPause,
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: viewModel.isSnapshotMode.value
+                  ? [
+                      // Snapshot mode buttons
+                      createIconButton(
+                        const Icon(Icons.fast_rewind),
+                        () => viewModel.seekBySnapshots(-5),
+                      ),
+                      createIconButton(
+                        const Icon(Icons.skip_previous),
+                        () => viewModel.seekBySnapshots(-1),
+                      ),
+                      playPause,
+                      createIconButton(
+                        const Icon(Icons.skip_next),
+                        () => viewModel.seekBySnapshots(1),
+                      ),
+                      createIconButton(
+                        const Icon(Icons.fast_forward),
+                        () => viewModel.seekBySnapshots(5),
+                      ),
+                    ]
+                  : [
+                      // Smooth mode buttons
+                      createIconButton(
+                        const Icon(Icons.replay_30),
+                        () => viewModel
+                            .seekBySmooth(const Duration(seconds: -30)),
+                      ),
+                      createIconButton(
+                        const Icon(Icons.replay_5),
+                        () =>
+                            viewModel.seekBySmooth(const Duration(seconds: -5)),
+                      ),
+                      playPause,
+                      createIconButton(
+                        const Icon(Icons.forward_5),
+                        () =>
+                            viewModel.seekBySmooth(const Duration(seconds: 5)),
+                      ),
+                      createIconButton(
+                        const Icon(Icons.forward_30),
+                        () =>
+                            viewModel.seekBySmooth(const Duration(seconds: 30)),
+                      ),
+                    ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
