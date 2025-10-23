@@ -36,13 +36,10 @@ class VideoSessionViewModel extends ChangeNotifier {
   VideoPlayerController? get videoController => _videoController;
   ScrollController get timelineScrollController => _timelineScrollController;
 
-  // ---- Public thumbnail pre-fetching state  ----
-  final ValueNotifier<Map<Duration, Uint8List>> thumbnails = ValueNotifier({});
-
   // ---- Public constants ----
   static const double intervalSeconds = 2;
   static const double thumbnailWidth = 80.0;
-  static const int windowSize = 20;
+  static const int windowSize = 30;
   static double get pixelsPerSecond => thumbnailWidth / intervalSeconds;
 
   // ---- Private controllers ----
@@ -67,8 +64,8 @@ class VideoSessionViewModel extends ChangeNotifier {
   VideoThumbnailRepository? _thumbnailRepo;
 
   // ---- Private thumbnail pre-fetching state  ----
-  final Set<Duration> _pendingThumbnails = {};
-  Timer? _prefetchDebounce;
+  Timer? _prefetchThrottle;
+  bool _isPrefetchRunning = false;
   int? _prefetchStart;
   int? _prefetchEnd;
 
@@ -103,7 +100,6 @@ class VideoSessionViewModel extends ChangeNotifier {
       if (zipResult == null || zipResult.files.single.path == null) {
         _logger.warning('User did not submit a ZIP file');
         isLoading.value = false;
-        notifyListeners();
         return;
       }
 
@@ -116,7 +112,6 @@ class VideoSessionViewModel extends ChangeNotifier {
       if (videoResult == null || videoResult.files.single.path == null) {
         _logger.warning('User did not submit a video file');
         isLoading.value = false;
-        notifyListeners();
         return;
       }
 
@@ -130,7 +125,6 @@ class VideoSessionViewModel extends ChangeNotifier {
       errorMessage.value = 'Something went wrong while loading the video.';
     } finally {
       isLoading.value = false;
-      notifyListeners();
     }
   }
 
@@ -146,7 +140,6 @@ class VideoSessionViewModel extends ChangeNotifier {
       if (videoResult == null || videoResult.files.single.path == null) {
         _logger.warning('User did not submit a video file');
         isLoading.value = false;
-        notifyListeners();
         return;
       }
 
@@ -167,7 +160,6 @@ class VideoSessionViewModel extends ChangeNotifier {
       errorMessage.value = 'Something went wrong while loading the video.';
     } finally {
       isLoading.value = false;
-      notifyListeners();
     }
   }
 
@@ -202,7 +194,6 @@ class VideoSessionViewModel extends ChangeNotifier {
     playhead.value = Duration.zero;
 
     isInitialized.value = true;
-    notifyListeners();
     _logger.info('Session initialization successful');
   }
 
@@ -211,7 +202,7 @@ class VideoSessionViewModel extends ChangeNotifier {
     // Stop all timers
     _stopSnapshotTimer();
     _scrubDebounce?.cancel();
-    _prefetchDebounce?.cancel();
+    _prefetchThrottle?.cancel();
 
     // Reset repos and controllers
     _thumbnailRepo?.dispose();
@@ -229,8 +220,6 @@ class VideoSessionViewModel extends ChangeNotifier {
 
     // Clear all data collections
     snapshots = [];
-    _pendingThumbnails.clear();
-    thumbnails.value = {};
 
     // Reset all public UI state
     isInitialized.value = false;
@@ -247,10 +236,9 @@ class VideoSessionViewModel extends ChangeNotifier {
     _epoch = 0;
     _wasPlayingBeforeScrub = false;
     _scrubEpoch = null;
+    _isPrefetchRunning = false;
     _prefetchStart = null;
     _prefetchEnd = null;
-
-    notifyListeners();
   }
 
   // ================
@@ -298,8 +286,6 @@ class VideoSessionViewModel extends ChangeNotifier {
         _setOwner(Owner.idle);
       }
     }
-
-    notifyListeners();
   }
 
   /// Listener for [videoController] that fires continuously while the video is playing
@@ -326,7 +312,7 @@ class VideoSessionViewModel extends ChangeNotifier {
         !isSnapshotMode.value &&
         !isUserScrubbing.value) {
       // Prefetch on any video update in smooth mode, even when paused
-      _prefetchTick();
+      _updateThumbnailCacheWindow();
     }
   }
 
@@ -390,7 +376,7 @@ class VideoSessionViewModel extends ChangeNotifier {
       _writePlayhead(nextSnapshotPosition, Owner.timer);
       await _seekRendererTo(nextSnapshotPosition, epoch);
 
-      _prefetchTick();
+      _updateThumbnailCacheWindow();
 
       if (nextSnapshot == snapshots.length - 1) {
         // Stop playback when we reach the final snapshot
@@ -442,7 +428,7 @@ class VideoSessionViewModel extends ChangeNotifier {
     _writePlayhead(clampedTarget, by);
     await _seekRendererTo(clampedTarget, _epoch);
 
-    if (!isUserScrubbing.value) _prefetchTick();
+    if (!isUserScrubbing.value) _updateThumbnailCacheWindow();
   }
 
   // ==============
@@ -475,17 +461,18 @@ class VideoSessionViewModel extends ChangeNotifier {
     final epoch = _scrubEpoch!;
     _scrubDebounce?.cancel();
 
+    final offset = _timelineScrollController.offset;
+    var target = _pxToDuration(offset);
+
+    // Sync playhead and prefetch as we scroll
+    _writePlayhead(target, Owner.user);
+    _updateThumbnailCacheWindow();
+
     // Render the frame we scrubbed to on the timeline with a 90ms debounce
     _scrubDebounce = Timer(const Duration(milliseconds: 90), () async {
       if (epoch != _epoch) return;
-      final offset = _timelineScrollController.offset;
-      var target = _pxToDuration(offset);
 
-      // Sync playhead and video to user's scrolling gesture
-      _writePlayhead(target, Owner.user);
       await _seekRendererTo(target, epoch);
-
-      _prefetchTick();
     });
   }
 
@@ -502,9 +489,12 @@ class VideoSessionViewModel extends ChangeNotifier {
       target = snapshots[idx].videoTimestamp;
     }
 
-    final epoch = _scrubEpoch ?? _bumpEpoch();
+    // Clean up scrubbing-related state
+    isUserScrubbing.value = false;
+    _scrubEpoch = null;
 
     // Sync playhead and video to where user finished scrolling to
+    final epoch = _scrubEpoch ?? _bumpEpoch();
     _writePlayhead(target, Owner.user);
     await _seekRendererTo(target, epoch);
 
@@ -532,14 +522,14 @@ class VideoSessionViewModel extends ChangeNotifier {
     } else {
       _setOwner(Owner.idle);
     }
-
-    // Clean up scrubbing-related state
-    isUserScrubbing.value = false;
-    _scrubEpoch = null;
-    notifyListeners();
   }
 
-  /// Fetches the initial window of thumbnails needed for the timeline to appear populated.
+  /// Returns the thumbnail notifier for a given [time]
+  Future<Uint8List?> getThumbnailForTimestamp(Duration time) {
+    return _thumbnailRepo!.getThumbnailForTimestamp(time);
+  }
+
+  /// Fetches the initial window of thumbnails needed for the timeline to appear populated
   Future<void> _prefetchInitialThumbnails() async {
     if (_thumbnailRepo == null || !_videoReady) return;
 
@@ -549,60 +539,82 @@ class VideoSessionViewModel extends ChangeNotifier {
     const start = 0;
     final end = windowSize.clamp(0, totalThumbs);
 
-    await _prefetchRange(start, end, totalDur);
+    await _warmThumbnailCacheRange(start, end, totalDur);
 
-    // Set the prefetch window state.
+    // Set the prefetch window state
     _prefetchStart = start;
     _prefetchEnd = end;
   }
 
-  /// Calculates and triggers thumbnail pre-fetching based on current state
-  void _prefetchTick() {
+  /// Calculates the window of thumbnails to loads based on current state
+  /// and triggers the pre-fetch
+  void _updateThumbnailCacheWindow() {
     if (_thumbnailRepo == null || !isInitialized.value || !_videoReady) return;
 
-    _prefetchDebounce?.cancel();
-    _prefetchDebounce = Timer(const Duration(milliseconds: 120), () {
-      final totalDur = _videoController!.value.duration;
-      final totalThumbs = (totalDur.inSeconds / intervalSeconds).ceil() + 1;
+    if (_prefetchThrottle != null && _prefetchThrottle!.isActive) {
+      return;
+    }
 
-      int centerIndex;
-      if (isUserScrubbing.value) {
-        // While dragging prefetch is viewport-driven
-        final offsetPx = _timelineScrollController.offset;
-        centerIndex = (offsetPx / thumbnailWidth).floor();
-      } else {
-        // During normal playback / seeks, prefetch is play-head driven
-        final double seconds = playhead.value.inMilliseconds / 1000.0;
-        centerIndex = (seconds / intervalSeconds).floor();
+    // No timer is active, schedule a new one
+    _prefetchThrottle = Timer(const Duration(milliseconds: 120), () async {
+      if (_isPrefetchRunning) {
+        // Previous fetch still running, cancel this one
+        return;
       }
 
-      // Compute new window (inclusive-exclusive)
-      final start = (centerIndex - windowSize).clamp(0, totalThumbs);
-      final end = (centerIndex + windowSize).clamp(0, totalThumbs);
+      _isPrefetchRunning = true;
 
-      if (_prefetchStart == null ||
-          start >= (_prefetchEnd ?? -1) ||
-          end <= (_prefetchStart ?? -1)) {
-        // First run or non-overlapping jump, prefetch entire window
-        _prefetchRange(start, end, totalDur);
-      } else {
-        if (end > _prefetchEnd!) {
-          // Slide to the right
-          _prefetchRange(_prefetchEnd!, end, totalDur);
+      try {
+        final totalDur = _videoController!.value.duration;
+        final totalThumbs = (totalDur.inSeconds / intervalSeconds).ceil() + 1;
+
+        int centerIndex;
+        if (isUserScrubbing.value) {
+          // While dragging prefetch is viewport-driven
+          final offsetPx = _timelineScrollController.offset;
+          centerIndex = (offsetPx / thumbnailWidth).floor();
+        } else {
+          // During normal playback / seeks, prefetch is play-head driven
+          final double seconds = playhead.value.inMilliseconds / 1000.0;
+          centerIndex = (seconds / intervalSeconds).floor();
         }
-        if (start < _prefetchStart!) {
-          // Slide to the left
-          _prefetchRange(start, _prefetchStart!, totalDur);
+
+        // Compute new window (inclusive-exclusive)
+        final start = (centerIndex - windowSize).clamp(0, totalThumbs);
+        final end = (centerIndex + windowSize).clamp(0, totalThumbs);
+
+        if (_prefetchStart == null ||
+            start >= (_prefetchEnd ?? -1) ||
+            end <= (_prefetchStart ?? -1)) {
+          // First run or non-overlapping jump, prefetch entire window
+          await _warmThumbnailCacheRange(start, end, totalDur);
+        } else {
+          // Run overlapping ranges in parallel
+          final List<Future> jobs = [];
+          if (end > _prefetchEnd!) {
+            // Slide to the right
+            jobs.add(_warmThumbnailCacheRange(_prefetchEnd!, end, totalDur));
+          }
+          if (start < _prefetchStart!) {
+            // Slide to the left
+            jobs.add(
+                _warmThumbnailCacheRange(start, _prefetchStart!, totalDur));
+          }
+          if (jobs.isNotEmpty) {
+            await Future.wait(jobs);
+          }
         }
+
+        _prefetchStart = start;
+        _prefetchEnd = end;
+      } finally {
+        _isPrefetchRunning = false;
       }
-
-      _prefetchStart = start;
-      _prefetchEnd = end;
     });
   }
 
-  /// Helper to fetch a specific range of thumbnails
-  Future<void> _prefetchRange(
+  /// Helper to load a specific range of thumbnails into the repository's cache
+  Future<void> _warmThumbnailCacheRange(
       int start, int end, Duration totalDuration) async {
     final List<Future> fetchJobs = [];
 
@@ -610,24 +622,12 @@ class VideoSessionViewModel extends ChangeNotifier {
       final time = Duration(seconds: i * intervalSeconds.floor());
       if (time > totalDuration) break;
 
-      if (thumbnails.value.containsKey(time) ||
-          _pendingThumbnails.contains(time)) {
+      if (_thumbnailRepo!.hasThumbnail(time)) {
+        // Thumbnail already exists, skip
         continue;
       }
 
-      _pendingThumbnails.add(time);
-      final job =
-          _thumbnailRepo!.getThumbnailForTimestamp(time).then((imageData) {
-        if (imageData != null) {
-          final newThumbs = Map.of(thumbnails.value);
-          newThumbs[time] = imageData;
-          thumbnails.value = newThumbs;
-        }
-      }).whenComplete(() {
-        // Ensure we always remove from pending, even on error.
-        _pendingThumbnails.remove(time);
-      });
-
+      final job = _thumbnailRepo!.getThumbnailForTimestamp(time);
       fetchJobs.add(job);
     }
 
