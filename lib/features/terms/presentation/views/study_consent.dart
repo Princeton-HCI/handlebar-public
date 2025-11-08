@@ -25,7 +25,7 @@ class _StudyConsentState extends State<StudyConsent> {
   }
 
   Future<void> _loadCurrentTermsStatus() async {
-    final termsRes = await termsRepo.checkCurrent();
+    final termsRes = await termsRepo.checkCurrentTerms();
 
     if (!mounted) return;
 
@@ -54,7 +54,7 @@ class _StudyConsentState extends State<StudyConsent> {
       isUpdating = true;
     });
 
-    final r = await termsRepo.accept(currentTermsId!);
+    final r = await termsRepo.acceptTerms(currentTermsId!);
 
     if (!mounted) return;
 

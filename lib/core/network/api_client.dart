@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:handlebar/core/utils/result.dart';
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 
 import '../storage/auth_token_store.dart';
 import 'api_env_config.dart';
@@ -14,7 +15,8 @@ class ApiClient {
 
   ApiClient(this._tokens);
 
-  // Timeout for all HTTP calls
+  // ==== HTTP FUNCTIONALITY ====
+
   static final Duration timeout = const Duration(seconds: 15);
 
   Future<http.Response> get(String path, {Map<String, String>? headers}) =>
@@ -61,6 +63,8 @@ class ApiClient {
     }
   }
 
+  // ==== API HELPERS ====
+
   /// Extracts the authentication token from a server response if it exists
   static String extractAuthToken(http.Response res) {
     final authHeader = res.headers['authorization'];
@@ -72,11 +76,68 @@ class ApiClient {
     return '';
   }
 
+  /// 401 = not authenticated / token missing/bad
+  static bool isUnauthorized(http.Response res) => res.statusCode == 401;
+
+  /// 403 = authenticated but not allowed (role / group)
+  static bool isForbidden(http.Response res) => res.statusCode == 403;
+
+  static Failure<T, ApiError> unauthorizedFailure<T>(
+    Logger logger, {
+    required String action,
+  }) {
+    logger.info('$action failed - unauthorized (401)');
+    return const Failure(ApiError(
+      message: 'You are not authenticated. Please sign up or log in.',
+      statusCode: 401,
+    ));
+  }
+
+  static Failure<T, ApiError> forbiddenFailure<T>(
+    Logger logger, {
+    required String action,
+  }) {
+    logger.info('$action failed - forbidden (403)');
+    return const Failure(
+      ApiError(
+        message: 'You do not have permission to perform this action.',
+        statusCode: 403,
+      ),
+    );
+  }
+
+  static Failure<T, ApiError> unhandledFailure<T>(
+    Logger logger,
+    http.Response res, {
+    required String action,
+  }) {
+    final msg = errorMessage(res);
+    logger.severe('$action failed - unhandled $msg');
+    return Failure(ApiError(message: msg, statusCode: res.statusCode));
+  }
+
+  static Failure<T, ApiError> connectionFailure<T>(
+    Logger logger,
+    ApiException e, {
+    required String action,
+  }) {
+    logger.severe('$action failed - ${e.message}');
+    return Failure(ApiError(message: e.message));
+  }
+
+  static Failure<T, ApiError> unexpectedFailure<T>(
+    Logger logger,
+    Object e,
+    StackTrace st, {
+    required String action,
+  }) {
+    logger.severe('$action failed - unexpected: $e', e, st);
+    return const Failure(ApiError(message: 'Unexpected error'));
+  }
+
   /// Formats an HTTP error response
   static String errorMessage(http.Response res) =>
       'HTTP ${res.statusCode}: ${res.body}';
-
-  static bool isUnauthorized(http.Response res) => res.statusCode == 401;
 }
 
 /// Exception for client-side API failures from no HTTP response

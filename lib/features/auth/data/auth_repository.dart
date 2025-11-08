@@ -41,24 +41,16 @@ class AuthRepository {
       final res = await _api.post('/api/users', body: body);
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _logger.info("Registration successful");
+        _logger.info("signup successful");
         // Auto-login the newly created user
         return login(email, password);
       }
 
-      // Unhandled result
-      final errorMsg = ApiClient.errorMessage(res);
-      _logger.severe("Registration failed - $errorMsg");
-      return Failure(ApiError(
-        message: errorMsg,
-        statusCode: res.statusCode,
-      ));
+      return ApiClient.unhandledFailure(_logger, res, action: "signup");
     } on ApiException catch (e) {
-      _logger.severe("Registration failed - ${e.message}");
-      return Failure(ApiError(message: e.message));
+      return ApiClient.connectionFailure(_logger, e, action: "signup");
     } catch (e, st) {
-      _logger.severe("Registration failed - unexpected: $e", st);
-      return const Failure(ApiError(message: "Unexpected error"));
+      return ApiClient.unexpectedFailure(_logger, e, st, action: "signup");
     }
   }
 
@@ -69,11 +61,6 @@ class AuthRepository {
       final res = await _api.post('/api/sessions', body: {
         "session": {"email": email, "password": password}
       });
-
-      if (res.statusCode == 401) {
-        _logger.info("Login failed - 401 User not found");
-        return Failure(ApiError(message: "User not found", statusCode: 401));
-      }
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
@@ -88,27 +75,24 @@ class AuthRepository {
           }
           await _saveUserData(userData);
 
-          _logger.info("Login successful");
+          _logger.info("login successful");
           return Success(AuthSession(token: token, userData: userData));
         }
 
-        _logger.info("Login failed - No user data found");
+        _logger.info("login failed - No user data found");
         return Failure(ApiError(message: "No user data found"));
       }
 
-      // Unhandled result
-      final errorMsg = ApiClient.errorMessage(res);
-      _logger.severe("Login failed - $errorMsg");
-      return Failure(ApiError(
-        message: errorMsg,
-        statusCode: res.statusCode,
-      ));
+      if (res.statusCode == 401) {
+        _logger.info("login failed - bad credentials (401)");
+        return Failure(ApiError(message: "User not found", statusCode: 401));
+      }
+
+      return ApiClient.unhandledFailure(_logger, res, action: "login");
     } on ApiException catch (e) {
-      _logger.severe("Login failed - ${e.message}");
-      return Failure(ApiError(message: e.message));
+      return ApiClient.connectionFailure(_logger, e, action: "login");
     } catch (e, st) {
-      _logger.severe("Login failed - unexpected: $e", st);
-      return const Failure(ApiError(message: "Unexpected error"));
+      return ApiClient.unexpectedFailure(_logger, e, st, action: "login");
     }
   }
 

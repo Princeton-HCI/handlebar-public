@@ -17,38 +17,28 @@ class CrepeEventRepository {
 
   Future<CrepeEventSendResult> send(CrepeEvent event) async {
     try {
-      _logger.info('Sending CrepeEvent...');
+      _logger.info('Starting send request...');
       if (!_tokens.isAuthenticated) {
-        _logger.info('CrepeEvent send blocked - not authenticated');
-        return Failure(ApiError(message: 'User not authenticated'));
+        // Check locally first since this runs in the background
+        return ApiClient.unauthorizedFailure(_logger, action: 'send');
       }
 
       final res = await _api.post('/api/crepe/event', body: event.toJson());
 
       if (ApiClient.isUnauthorized(res)) {
-        _logger.info('CrepeEvent send failed - unauthorized (401)');
-        await _tokens.clearAuthToken();
-        return Failure(ApiError(
-          message: 'Your session has expired. Please log in again.',
-          statusCode: 401,
-        ));
+        return ApiClient.unauthorizedFailure(_logger, action: 'send');
       }
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _logger.info('CrepeEvent sent successfully');
+        _logger.info('send successful');
         return const Success(true);
       }
 
-      // Unhandled response
-      final msg = ApiClient.errorMessage(res);
-      _logger.severe('CrepeEvent send failed - $msg');
-      return Failure(ApiError(message: msg, statusCode: res.statusCode));
+      return ApiClient.unhandledFailure(_logger, res, action: 'send');
     } on ApiException catch (e) {
-      _logger.severe("CrepeEvent send failed - ${e.message}");
-      return Failure(ApiError(message: e.message));
+      return ApiClient.connectionFailure(_logger, e, action: 'send');
     } catch (e, st) {
-      _logger.severe("CrepeEvent send failed - unexpected: $e", st);
-      return const Failure(ApiError(message: "Unexpected error"));
+      return ApiClient.unexpectedFailure(_logger, e, st, action: 'send');
     }
   }
 }

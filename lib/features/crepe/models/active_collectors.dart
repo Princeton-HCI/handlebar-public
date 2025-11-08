@@ -1,6 +1,7 @@
 import 'collector.dart';
 
-/// Represents the currently active collectors running in the background
+/// Represents all the collectors running in the background
+/// from all research groups where the user is a participant
 class ActiveCollectors {
   final List<Collector> collectors;
   final DateTime fetchedAt;

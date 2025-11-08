@@ -7,6 +7,10 @@ class ApiEnvConfig {
   static const String _prod =
       'https://dsc-api-service-23350212163.us-central1.run.app';
 
+  // For testing:
+  // static const String _staging = 'http://10.0.2.2:4000';
+  // static const String _prod = 'http://10.0.2.2:4000';
+
   static bool _useProd = kDebugMode ? false : true;
 
   static String get baseUrl => _useProd ? _prod : _staging;

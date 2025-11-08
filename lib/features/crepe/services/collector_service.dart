@@ -112,7 +112,7 @@ class CollectorService {
     try {
       log('📡 [CollectorService] Getting active collectors from backend...');
 
-      final result = await collectorRepo.getActiveCollectors();
+      final result = await rgCollectorRepo.listParticipantCollectors();
 
       return result.fold(
         onSuccess: (response) async {

@@ -11,7 +11,14 @@ class AuthTokenStore {
   AuthTokenStore(this._storage);
 
   Future<void> init() async {
-    _storage.initialize();
+    await _storage.initialize();
+
+    // Read previously saved token
+    final saved = await _storage.storage.read(key: 'handlebar_auth_token');
+    if (saved != null && saved.isNotEmpty) {
+      _storage.accessToken = saved;
+    }
+
     _logger.info("Storage initialization successful");
   }
 
