@@ -19,8 +19,12 @@ class ApiClient {
 
   static final Duration timeout = const Duration(seconds: 15);
 
-  Future<http.Response> get(String path, {Map<String, String>? headers}) =>
-      _wrap(http.get(_uri(path), headers: _headers(headers)));
+  Future<http.Response> get(String path,
+      {Map<String, String>? headers, Map<String, String>? queryParameters}) {
+    final baseUri = _uri(path);
+    final finalUri = baseUri.replace(queryParameters: queryParameters);
+    return _wrap(http.get(finalUri, headers: _headers(headers)));
+  }
 
   Future<http.Response> post(String path,
           {Object? body, Map<String, String>? headers}) =>

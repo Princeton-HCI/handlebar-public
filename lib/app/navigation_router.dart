@@ -1,4 +1,3 @@
-import 'package:handlebar/features/crepe/presentation/views/crepe_events_test.dart';
 import 'package:handlebar/features/researcher/presentation/views/researcher_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -44,12 +43,6 @@ GoRouter navigationRouter() {
         path: '/study-consent',
         builder: (BuildContext context, GoRouterState state) {
           return const StudyConsent();
-        },
-      ),
-      GoRoute(
-        path: '/crepe-events-test',
-        builder: (BuildContext context, GoRouterState state) {
-          return const CrepeEventsTest();
         },
       ),
       GoRoute(

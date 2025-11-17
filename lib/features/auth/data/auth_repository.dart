@@ -24,8 +24,9 @@ class AuthRepository {
   /// Signs a user up for Handlebar and immediately logs them in
   Future<AuthResult> signup(String email, String password,
       {String? referral}) async {
+    final action = 'signup';
     try {
-      _logger.info("Starting signup request...");
+      _logger.info('Starting $action request...');
       final body = {
         "user": {
           "email": email,
@@ -41,23 +42,24 @@ class AuthRepository {
       final res = await _api.post('/api/users', body: body);
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _logger.info("signup successful");
+        _logger.info("$action successful");
         // Auto-login the newly created user
         return login(email, password);
       }
 
-      return ApiClient.unhandledFailure(_logger, res, action: "signup");
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: "signup");
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: "signup");
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   /// Logs a user in to Handlebar
   Future<AuthResult> login(String email, String password) async {
+    final action = 'login';
     try {
-      _logger.info("Starting login request...");
+      _logger.info('Starting $action request...');
       final res = await _api.post('/api/sessions', body: {
         "session": {"email": email, "password": password}
       });
@@ -75,24 +77,25 @@ class AuthRepository {
           }
           await _saveUserData(userData);
 
-          _logger.info("login successful");
+          _logger.info("$action successful");
           return Success(AuthSession(token: token, userData: userData));
         }
 
-        _logger.info("login failed - No user data found");
+        _logger.info("$action failed - No user data found");
         return Failure(ApiError(message: "No user data found"));
       }
 
       if (res.statusCode == 401) {
-        _logger.info("login failed - bad credentials (401)");
-        return Failure(ApiError(message: "User not found", statusCode: 401));
+        final msg = "User not found";
+        _logger.info("$action failed - $msg");
+        return Failure(ApiError(message: msg, statusCode: 401));
       }
 
-      return ApiClient.unhandledFailure(_logger, res, action: "login");
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: "login");
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: "login");
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 

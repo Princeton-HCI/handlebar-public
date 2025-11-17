@@ -1,19 +1,23 @@
 import 'dart:developer';
-import 'crepe_event.dart';
 
 /// Represents a successful match between collected data and a data field,
-/// containing the matched value and metadata about when and what was matched.
+/// containing the matched value and metadata about who triggered the match
+/// and when it occurred
 class CollectorMatch {
   final int dataFieldId;
-  final String value;
+  final int membershipId;
   final int? collectorId;
+  final String value;
+  final List<dynamic> matchedNodes;
   final String? dataFieldName;
   final DateTime matchedAt;
 
   CollectorMatch({
     required this.dataFieldId,
-    required this.value,
+    required this.membershipId,
     this.collectorId,
+    required this.value,
+    required this.matchedNodes,
     this.dataFieldName,
     DateTime? matchedAt,
   }) : matchedAt = matchedAt ?? DateTime.now();
@@ -21,9 +25,11 @@ class CollectorMatch {
   factory CollectorMatch.fromJson(Map<String, dynamic> json) {
     return CollectorMatch(
       dataFieldId: _parseId(json['datafieldId'] ?? json['data_field_id']),
-      value: json['value']?.toString() ?? json['content']?.toString() ?? '',
+      membershipId: _parseId(json['membership_id']),
       collectorId:
           json['collectorId'] != null ? _parseId(json['collectorId']) : null,
+      value: json['value']?.toString() ?? json['content']?.toString() ?? '',
+      matchedNodes: json['matchedNodes'] as List<dynamic>? ?? [],
       dataFieldName: json['name']?.toString(),
       matchedAt: json['matchedAt'] != null
           ? DateTime.parse(json['matchedAt'])
@@ -46,21 +52,24 @@ class CollectorMatch {
     return -1;
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toContentJson() {
     return {
-      'data_field_id': dataFieldId,
       'value': value,
-      'collectorId': collectorId,
+      'matchedNodes': matchedNodes,
       'dataFieldName': dataFieldName,
       'matchedAt': matchedAt.toIso8601String(),
     };
   }
 
-  CrepeEvent toCrepeEvent() {
-    return CrepeEvent(
-      dataFieldId: dataFieldId,
-      collectedAt: matchedAt,
-      content: value,
-    );
+  Map<String, dynamic> toJson() {
+    return {
+      'data_field_id': dataFieldId,
+      'membership_id': membershipId,
+      'collectorId': collectorId,
+      'value': value,
+      'matchedNodes': matchedNodes,
+      'dataFieldName': dataFieldName,
+      'matchedAt': matchedAt.toIso8601String(),
+    };
   }
 }

@@ -7,7 +7,7 @@ class ApiEnvConfig {
   static const String _prod =
       'https://dsc-api-service-23350212163.us-central1.run.app';
 
-  // For testing:
+  // For testing the local backend:
   // static const String _staging = 'http://10.0.2.2:4000';
   // static const String _prod = 'http://10.0.2.2:4000';
 

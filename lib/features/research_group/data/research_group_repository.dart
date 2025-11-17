@@ -13,75 +13,74 @@ class ResearchGroupRepository {
   final ApiClient _api;
   final _logger = Logger('ResearchGroupRepository');
 
-  static const String base = '/api/research/groups';
+  static const String _base = '/api/research/groups';
 
   ResearchGroupRepository(this._api);
 
   Future<GroupsResult> listUserResearchGroups() async {
+    final action = 'listUserResearchGroups';
     try {
-      _logger.info('Starting listUserResearchGroups request...');
-      final res = await _api.get(base);
+      _logger.info('Starting $action request...');
+      final res = await _api.get(_base);
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
         final items = (map['data'] as List).cast<Map<String, dynamic>>();
         final groups = items.map(ResearchGroup.fromJson).toList();
-        _logger.info('listUserResearchGroups successful');
+        _logger.info('$action successful');
         return Success(groups);
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger,
-            action: 'listUserResearchGroups');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res,
-          action: 'listUserResearchGroups');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e,
-          action: 'listUserResearchGroups');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st,
-          action: 'listUserResearchGroups');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   Future<GroupResult> getById(int id) async {
+    final action = 'getById($id)';
     try {
-      _logger.info('Starting getById($id) request...');
-      final res = await _api.get('$base/$id');
+      _logger.info('Starting $action request...');
+      final res = await _api.get('$_base/$id');
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
         final group =
             ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
-        _logger.info('getById successful');
+        _logger.info('$action successful');
         return Success(group);
       }
 
       if (res.statusCode == 404) {
         final msg = 'Group not found';
-        _logger.warning('getById failed - $msg');
+        _logger.warning('$action failed - $msg');
         return Failure(ApiError(message: msg, statusCode: 404));
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: 'getById');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res, action: 'getById');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: 'getById');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: 'getById');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   Future<GroupResult> create(
       {required String name, required String description}) async {
+    final action = 'create($name)';
     try {
-      _logger.info('Starting create request...');
-      final res = await _api.post(base, body: {
+      _logger.info('Starting $action request...');
+      final res = await _api.post(_base, body: {
         'research_group': {
           'name': name,
           'description': description,
@@ -92,66 +91,68 @@ class ResearchGroupRepository {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
         final group =
             ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
-        _logger.info('create successful');
+        _logger.info('$action successful');
         return Success(group);
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: 'create');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
-      return ApiClient.unhandledFailure(_logger, res, action: 'create');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: 'create');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: 'create');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   Future<GroupResult> update(int id,
       {String? name, String? description}) async {
+    final action = 'update($id)';
     try {
-      _logger.info('Starting update($id) request');
+      _logger.info('Starting $action request');
       final attrs = <String, dynamic>{};
       if (name != null) attrs['name'] = name;
       if (description != null) attrs['description'] = description;
 
       final res =
-          await _api.patch('$base/$id', body: {'research_group': attrs});
+          await _api.patch('$_base/$id', body: {'research_group': attrs});
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
         final group =
             ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
-        _logger.info('update successful');
+        _logger.info('$action successful');
         return Success(group);
       }
 
       if (res.statusCode == 404) {
         final msg = 'Group not found';
-        _logger.warning('update failed - $msg');
+        _logger.warning('$action failed - $msg');
         return Failure(ApiError(message: msg, statusCode: 404));
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: 'update');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
       if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: 'update');
+        return ApiClient.forbiddenFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res, action: 'update');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: 'update');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: 'update');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   Future<GroupDeleteResult> delete(int id) async {
+    final action = 'delete($id)';
     try {
-      _logger.info('Starting delete($id) request...');
-      final res = await _api.delete('$base/$id');
+      _logger.info('Starting $action request...');
+      final res = await _api.delete('$_base/$id');
 
       if (res.statusCode == 204) {
         _logger.info('delete successful');
@@ -160,23 +161,23 @@ class ResearchGroupRepository {
 
       if (res.statusCode == 404) {
         final msg = 'Group not found';
-        _logger.warning('delete failed - $msg');
+        _logger.warning('$action failed - $msg');
         return Failure(ApiError(message: msg, statusCode: 404));
       }
 
       if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: 'delete');
+        return ApiClient.forbiddenFailure(_logger, action: action);
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: 'delete');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res, action: 'delete');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: 'delete');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: 'delete');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 }

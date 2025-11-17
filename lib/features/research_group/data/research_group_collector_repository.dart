@@ -7,8 +7,11 @@ import '../../../core/utils/result.dart';
 import '../../crepe/models/active_collectors.dart';
 import '../../crepe/models/collector.dart';
 import '../../crepe/models/data_field.dart';
+import '../../crepe/models/participant_collector.dart';
 
 typedef ActiveCollectorsResult = Result<ActiveCollectors, ApiError>;
+typedef ParticipantCollectorsResult
+    = Result<List<ParticipantCollector>, ApiError>;
 typedef CollectorsResult = Result<List<Collector>, ApiError>;
 typedef BoolResult = Result<bool, ApiError>;
 
@@ -16,14 +19,15 @@ class ResearchGroupCollectorRepository {
   final ApiClient _api;
   final _logger = Logger('ResearchGroupCollectorRepository');
 
-  static const String base = '/api/research/groups';
+  static const String _base = '/api/research/groups';
 
   ResearchGroupCollectorRepository(this._api);
 
   Future<CollectorsResult> listGroupCollectors(int groupId) async {
+    final action = 'listGroupCollectors($groupId)';
     try {
-      _logger.info("Starting listGroupCollectors($groupId) request...");
-      final res = await _api.get('$base/$groupId/collectors');
+      _logger.info("Starting $action request...");
+      final res = await _api.get('$_base/$groupId/collectors');
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
@@ -32,7 +36,7 @@ class ResearchGroupCollectorRepository {
           final collectors = data
               .map((e) => Collector.fromJson(e as Map<String, dynamic>))
               .toList();
-          _logger.info("listGroupCollectors successful");
+          _logger.info("$action successful");
           return Success(collectors);
         }
 
@@ -44,66 +48,59 @@ class ResearchGroupCollectorRepository {
       if (ApiClient.isUnauthorized(res)) {
         return ApiClient.unauthorizedFailure(
           _logger,
-          action: 'listGroupCollectors',
+          action: action,
         );
       }
 
-      return ApiClient.unhandledFailure(_logger, res,
-          action: 'listGroupCollectors');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e,
-          action: 'listGroupCollectors');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st,
-          action: 'listGroupCollectors');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
-  Future<ActiveCollectorsResult> listParticipantCollectors() async {
+  Future<ParticipantCollectorsResult> listParticipantCollectors() async {
+    final action = 'listParticipantCollectors';
     try {
-      _logger.info("Starting listParticipantCollectors request...");
+      _logger.info("Starting $action request...");
       final res = await _api.get('/api/research/me/collectors');
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final data = map['data'];
-        if (data is List) {
-          final collectors = data
-              .map((e) => Collector.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _logger.info("listParticipantCollectors successful");
-          return Success(ActiveCollectors(collectors: collectors));
-        }
 
-        _logger.severe('Invalid response format - data is not a list');
-        return const Failure(
-            ApiError(message: 'Invalid response format from server'));
+        final items = (map['data'] as List).cast<List<dynamic>>();
+
+        final collectors = items.map(ParticipantCollector.fromList).toList();
+
+        _logger.info('$action successful');
+        return Success(collectors);
       }
 
       if (ApiClient.isUnauthorized(res)) {
         return ApiClient.unauthorizedFailure(
           _logger,
-          action: 'listParticipantCollectors',
+          action: action,
         );
       }
 
       return ApiClient.unhandledFailure(
         _logger,
         res,
-        action: 'listParticipantCollectors',
+        action: action,
       );
     } on ApiException catch (e) {
       return ApiClient.connectionFailure(
         _logger,
         e,
-        action: 'listParticipantCollectors',
+        action: action,
       );
     } catch (e, st) {
       return ApiClient.unexpectedFailure(
         _logger,
         e,
         st,
-        action: 'listParticipantCollectors',
+        action: action,
       );
     }
   }
@@ -115,8 +112,9 @@ class ResearchGroupCollectorRepository {
     String? description,
     required List<DataField> dataFields,
   }) async {
+    final action = 'createCollectorAndAttach($groupId)';
     try {
-      _logger.info("Starting createCollectorAndAttach($groupId) request...");
+      _logger.info("Starting $action request...");
       final dfPayload = dataFields
           .map((df) => {
                 'name': df.name,
@@ -133,67 +131,59 @@ class ResearchGroupCollectorRepository {
         }
       };
 
-      final res = await _api.post('$base/$groupId/collectors', body: body);
+      final res = await _api.post('$_base/$groupId/collectors', body: body);
 
       if (res.statusCode == 201) {
-        _logger.info("createCollectorAndAttach successful");
+        _logger.info("$action successful");
         return const Success(true);
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger,
-            action: 'createCollectorAndAttach');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
       if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger,
-            action: 'createCollectorAndAttach');
+        return ApiClient.forbiddenFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res,
-          action: 'createCollectorAndAttach');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e,
-          action: 'createCollectorAndAttach');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st,
-          action: 'createCollectorAndAttach');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 
   Future<BoolResult> removeCollector(int groupId, int collectorId) async {
+    final action = 'removeCollector($groupId, $collectorId)';
     try {
-      _logger
-          .info("Starting removeCollector($groupId, $collectorId) request...");
-      final res = await _api.delete('$base/$groupId/collectors/$collectorId');
+      _logger.info("Starting $action request...");
+      final res = await _api.delete('$_base/$groupId/collectors/$collectorId');
 
       if (res.statusCode == 204) {
-        _logger.info("removeCollector successful");
+        _logger.info("$action successful");
         return const Success(true);
       }
 
       if (res.statusCode == 404) {
         final msg = 'Collector not found';
-        _logger.warning('removeCollector failed - $msg');
+        _logger.warning('$action failed - $msg');
         return Failure(ApiError(message: msg, statusCode: 404));
       }
 
       if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger,
-            action: 'removeCollector');
+        return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
       if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: 'removeCollector');
+        return ApiClient.forbiddenFailure(_logger, action: action);
       }
 
-      return ApiClient.unhandledFailure(_logger, res,
-          action: 'removeCollector');
+      return ApiClient.unhandledFailure(_logger, res, action: action);
     } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: 'removeCollector');
+      return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st,
-          action: 'removeCollector');
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
   }
 }
