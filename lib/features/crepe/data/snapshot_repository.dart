@@ -2,14 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:crepe_plugin/crepe_plugin.dart';
+import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 
 import '../models/snapshot.dart';
 
-/// Handles loading and decoding UI snapshot data
+/// Handles UI snapshot data operations
 class SnapshotRepository {
   static final Logger _logger = Logger('SnapshotRepository');
 
+  final CrepePlugin _plugin = CrepePlugin();
+
+  /// Loads raw snapshot JSONs from a ZIP file into a list of [Snapshot] objects
   Future<List<Snapshot>> loadSnapshotsFromZip(File zipFile) async {
     final bytes = await zipFile.readAsBytes();
     List<Map<String, dynamic>> rawSnapshots = [];
@@ -58,6 +63,25 @@ class SnapshotRepository {
         'Loaded ${snapshots.length} snapshots from $zipFile successfully');
 
     return snapshots;
+  }
+
+  /// Returns graph queries for a snapshot [entity] in the context of the given
+  /// [snapshot]
+  Future<SnapshotEntityQueries> getQueriesForEntity(
+    Snapshot snapshot,
+    Map<String, dynamic> entity,
+  ) async {
+    try {
+      final String snapshotJson = jsonEncode(snapshot.toPluginJson());
+      final int targetEntityId = entity['entityId'] as int;
+
+      final rawQueries =
+          await _plugin.generateQueries(snapshotJson, targetEntityId);
+      return SnapshotEntityQueries.fromJson(rawQueries);
+    } catch (e) {
+      _logger.severe('Failed to get queries from plugin: $e');
+      rethrow;
+    }
   }
 }
 

@@ -42,7 +42,7 @@ class SnapshotOverlay extends StatelessWidget {
         ),
 
         // 2. Invisible tap targets over each box
-        ...snapshot.entities.asMap().entries.map((entry) {
+        ...snapshot.nodeEntities.asMap().entries.map((entry) {
           final index = entry.key;
           final entity = entry.value;
           final box = scaledBoxes[index];

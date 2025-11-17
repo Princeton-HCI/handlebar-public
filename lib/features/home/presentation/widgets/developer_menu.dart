@@ -1,5 +1,6 @@
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 import 'package:handlebar/core/network/api_env_config.dart';
 
 import '../../../crepe/services/collector_service.dart';
@@ -293,8 +294,11 @@ class _SnapshotRecordingPanel extends StatelessWidget {
                   onChanged: (value) async {
                     if (value) {
                       await recordingService.startRecording();
+                      await FlutterScreenRecording.startRecordScreen(
+                          "snapshot_recording");
                     } else {
                       await recordingService.stopRecording();
+                      await FlutterScreenRecording.stopRecordScreen;
                     }
                   },
                 ),

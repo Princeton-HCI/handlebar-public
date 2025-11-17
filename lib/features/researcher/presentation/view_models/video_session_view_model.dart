@@ -3,11 +3,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../crepe/data/snapshot_repository.dart';
+import '../../../crepe/models/data_field.dart';
 import '../../data/video_thumbnail_repository.dart';
 import '../../../crepe/models/snapshot.dart';
 
@@ -36,6 +38,9 @@ class VideoSessionViewModel extends ChangeNotifier {
   VideoPlayerController? get videoController => _videoController;
   ScrollController get timelineScrollController => _timelineScrollController;
 
+  // ---- Public collector state ----
+  final ValueNotifier<bool> isCrepeQueryLoading = ValueNotifier(false);
+
   // ---- Public constants ----
   static const double intervalSeconds = 2;
   static const double thumbnailWidth = 80.0;
@@ -58,6 +63,7 @@ class VideoSessionViewModel extends ChangeNotifier {
 
   // ---- Private collector state ----
   List<Snapshot> snapshots = []; // List of all loaded video snapshots
+  final Map<int, List<DataField>> _dataFieldsForSnapshot = {};
 
   // ---- Private repositories ----
   final SnapshotRepository _snapshotRepo = SnapshotRepository();
@@ -151,7 +157,10 @@ class VideoSessionViewModel extends ChangeNotifier {
         return Snapshot(
           originalTimestamp: i * 1000,
           videoTimestamp: Duration(seconds: i),
-          entities: [],
+          metadata: {},
+          allEntities: [],
+          nodeEntities: [],
+          triples: [],
           boundingBoxes: [],
         );
       });
@@ -635,6 +644,53 @@ class VideoSessionViewModel extends ChangeNotifier {
     if (fetchJobs.isNotEmpty) {
       await Future.wait(fetchJobs);
     }
+  }
+
+  // ==============
+  // Collector methods
+  // ==============
+
+  /// Returns the graph queries for the [entity] in the context of the [snapshot]
+  Future<SnapshotEntityQueries?> getQueriesForEntity(
+      Snapshot snapshot, Map<String, dynamic> entity) async {
+    isCrepeQueryLoading.value = true;
+    try {
+      if (isPlaying.value) {
+        // Pause the video if it's playing (ideally we'll remove this check
+        // once we force users only being able to click on an entity iff
+        // the player is in snapshot mode with the video paused)
+        // but maybe this is a good guard regardless
+        togglePlayPause();
+      }
+
+      final queries = await _snapshotRepo.getQueriesForEntity(snapshot, entity);
+
+      if (queries.allQueries.isEmpty) {
+        errorMessage.value = 'No queries were generated.';
+        return null;
+      }
+
+      return queries;
+    } catch (e) {
+      errorMessage.value = 'Failed to generate queries.';
+      return null;
+    } finally {
+      isCrepeQueryLoading.value = false;
+    }
+  }
+
+  /// Creates a [DataField] for the given [snapshot] that can later become
+  /// part of a [Collector]
+  void addDataField(
+      Snapshot snapshot, String selectedQuery, String description) {
+    final newDataField = DataField(
+      dataFieldId: DateTime.now().millisecondsSinceEpoch,
+      graphQuery: selectedQuery,
+      name: description,
+    );
+
+    _dataFieldsForSnapshot.putIfAbsent(currSnapshotIndex.value, () => []);
+    _dataFieldsForSnapshot[currSnapshotIndex.value]!.add(newDataField);
   }
 
   // ==============
