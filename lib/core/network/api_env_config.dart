@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 /// Configuration class for the API environment
 class ApiEnvConfig {
   static const String _staging =
-      'https://dsc-api-staging-23350212163.us-central1.run.app';
+      'https://handlebar-backend-23350212163.us-east1.run.app';
   static const String _prod =
-      'https://dsc-api-service-23350212163.us-central1.run.app';
+      'https://handlebar-backend-23350212163.us-east1.run.app';
 
   // For testing the local backend:
   // static const String _staging = 'http://10.0.2.2:4000';

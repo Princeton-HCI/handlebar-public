@@ -63,7 +63,7 @@ class VideoSessionViewModel extends ChangeNotifier {
 
   // ---- Private collector state ----
   List<Snapshot> snapshots = []; // List of all loaded video snapshots
-  final Map<int, List<DataField>> _dataFieldsForSnapshot = {};
+  final Map<int, List<DataField>> dataFieldsForSnapshot = {};
 
   // ---- Private repositories ----
   final SnapshotRepository _snapshotRepo = SnapshotRepository();
@@ -689,8 +689,14 @@ class VideoSessionViewModel extends ChangeNotifier {
       name: description,
     );
 
-    _dataFieldsForSnapshot.putIfAbsent(currSnapshotIndex.value, () => []);
-    _dataFieldsForSnapshot[currSnapshotIndex.value]!.add(newDataField);
+    dataFieldsForSnapshot.putIfAbsent(currSnapshotIndex.value, () => []);
+    dataFieldsForSnapshot[currSnapshotIndex.value]!.add(newDataField);
+    notifyListeners();
+  }
+
+  void clearDataFields() {
+    dataFieldsForSnapshot.clear();
+    notifyListeners();
   }
 
   // ==============

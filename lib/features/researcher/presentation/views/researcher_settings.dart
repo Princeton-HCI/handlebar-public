@@ -17,6 +17,7 @@ import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_segment_group.dart';
 import '../../../../core/shared_widgets/static_responsive_scaffold.dart';
 import '../widgets/select_query_bottom_sheet.dart';
+import '../widgets/snapshot_field_list.dart';
 import '../widgets/snapshot_overlay.dart';
 
 /// Top-level widget for the Researcher Settings screen
@@ -340,7 +341,28 @@ class _VideoPlayerContainer extends StatelessWidget {
                           );
                         },
                       ),
-                    )),
+                    )
+                ),
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: vm.currSnapshotIndex,
+                    builder: (context, index, _) {
+                      return AnimatedBuilder( animation: vm,
+                      builder: (_, __) {
+                        final fields = vm.dataFieldsForSnapshot[index] ?? [];
+                        final snapshot = vm.snapshots[index].metadata;
+
+                        // If empty, render nothing
+                        if (fields.isEmpty) return const SizedBox.shrink();
+
+                        return SnapshotFieldList(snapshot: snapshot, fields: fields);
+                      });
+                    },
+                  ),
+                ),
               ],
             );
           },

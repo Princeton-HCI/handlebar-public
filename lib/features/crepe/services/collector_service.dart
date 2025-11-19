@@ -159,35 +159,12 @@ class CollectorService {
   }
 
   Future<bool> createAndSaveCollector(
-      Map<String, dynamic> json, String description) async {
+      Map<String, dynamic> snapshot, List<DataField> dataFields, String description) async {
     log('Creating collector with data: $json');
     try {
       // Extract fields from the single entity
-      final String appPackage = json['packageName'] as String;
-      final String appName = json['packageName']
-          as String; // Fallback to packageName since no metadata
-      final String? name =
-          json['text'] ?? json['contentDescription'] as String?;
-      final String className = json['className'] as String;
-      final String boundsInScreen = json['boundsInScreen'] as String;
-
-      // Create a single DataField if there is a name (text or contentDescription)
-      final List<DataField> dataFields = [];
-      if (name != null) {
-        // Construct graph query with package name, class name, and bounds
-        final List<String> predicates = [
-          '(HAS_PACKAGE_NAME $appPackage)',
-          '(HAS_CLASS_NAME $className)',
-          '(HAS_PARENT_LOCATION "$boundsInScreen")', // Using boundsInScreen as fallback
-        ];
-        final String graphQuery = '(conj ${predicates.join(' ')})';
-
-        dataFields.add(DataField(
-          dataFieldId: 0,
-          graphQuery: graphQuery,
-          name: name,
-        ));
-      }
+      final String appPackage = snapshot['packageName'] as String;
+      final String appName = snapshot['packageName'] as String; // Fallback to packageName since no metadata
 
       // Create Collector instance
       final collector = Collector(

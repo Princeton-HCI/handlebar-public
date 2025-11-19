@@ -20,8 +20,8 @@ class SnapshotOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scaleX = displaySize.width / referenceSize.width * 1.67;
-    final scaleY = displaySize.height / referenceSize.height * 1.67;
+    final scaleX = displaySize.width / referenceSize.width * 1.85; //1.67 from phone
+    final scaleY = displaySize.height / referenceSize.height * 1.78; //1.67 from phone
 
     // Pre-scale all boxes
     final scaledBoxes = snapshot.boundingBoxes.map((rect) {
@@ -46,7 +46,6 @@ class SnapshotOverlay extends StatelessWidget {
           final index = entry.key;
           final entity = entry.value;
           final box = scaledBoxes[index];
-
           return Positioned.fromRect(
             rect: box,
             child: GestureDetector(
@@ -64,9 +63,9 @@ class SnapshotOverlay extends StatelessWidget {
 class _BoundingBoxPainter extends CustomPainter {
   final List<Rect> boxes;
   final Paint _paint = Paint()
-    ..color = Colors.red
+    ..color = Colors.grey
     ..style = PaintingStyle.stroke
-    ..strokeWidth = 3.0
+    ..strokeWidth = 8.0
     ..strokeCap = StrokeCap.round;
 
   _BoundingBoxPainter(this.boxes);
