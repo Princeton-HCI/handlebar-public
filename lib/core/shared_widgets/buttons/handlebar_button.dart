@@ -75,8 +75,6 @@ class HandlebarButton extends StatelessWidget {
       ButtonVariant.primary => OutlinedButton(
           onPressed: disabled ? null : onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: scheme.onSurface,
-            backgroundColor: scheme.surface,
             side: BorderSide(color: scheme.outline, width: _borderWidth),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(_borderRadius)),

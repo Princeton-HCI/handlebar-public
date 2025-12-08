@@ -40,9 +40,6 @@ class HandlebarSegmentGroup extends StatelessWidget {
             ? (newSelection) => onPressed!(newSelection.first)
             : null,
         style: SegmentedButton.styleFrom(
-          backgroundColor: scheme.surface,
-          foregroundColor: scheme.onSurface,
-          selectedBackgroundColor: Colors.blue[200],
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_borderRadius),
               side: BorderSide(color: scheme.outline, width: _borderWidth)),

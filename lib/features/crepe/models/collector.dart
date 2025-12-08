@@ -6,14 +6,14 @@ class Collector {
   final int collectorId;
   final String appName;
   final String appPackage;
-  final String? description;
+  final String description;
   final List<DataField> dataFields;
 
   Collector({
     required this.collectorId,
     required this.appName,
     required this.appPackage,
-    this.description,
+    required this.description,
     required this.dataFields,
   });
 
@@ -22,7 +22,7 @@ class Collector {
       collectorId: json['collector_id'] as int,
       appName: json['app_name'] as String,
       appPackage: json['app_package'] as String,
-      description: json['description'] as String?,
+      description: json['description'] as String,
       dataFields: (json['datafields'] as List<dynamic>)
           .map((field) => DataField.fromJson(field))
           .toList(),

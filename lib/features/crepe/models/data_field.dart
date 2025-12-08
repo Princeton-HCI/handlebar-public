@@ -1,19 +1,19 @@
 /// Represents a data field configuration that defines what information to collect
 /// from an app using a specific graph query and associated metadata.
 class DataField {
-  final int dataFieldId;
+  final int? dataFieldId;
   final String graphQuery;
   final String name;
 
   DataField({
-    required this.dataFieldId,
+    this.dataFieldId,
     required this.graphQuery,
     required this.name,
   });
 
   factory DataField.fromJson(Map<String, dynamic> json) {
     return DataField(
-      dataFieldId: json['data_field_id'] as int,
+      dataFieldId: json['data_field_id'] as int?,
       graphQuery: json['graph_query'] as String,
       name: json['name'] as String,
     );

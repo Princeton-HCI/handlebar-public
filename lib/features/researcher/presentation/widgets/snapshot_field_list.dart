@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:handlebar/features/crepe/services/collector_service.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/shared_services/notification_service.dart';
+
+import '../../../../app/design-system/spacing.dart';
 import '../../../crepe/models/data_field.dart';
 import '../view_models/video_session_view_model.dart';
+import 'create_collector_dialog.dart';
 
 class SnapshotFieldList extends StatelessWidget {
+  final int snapshotIndex;
   final List<DataField> fields;
-  final Map<String, dynamic> snapshot;
 
-  const SnapshotFieldList({super.key, required this.fields, required this.snapshot});
+  const SnapshotFieldList(
+      {super.key, required this.snapshotIndex, required this.fields});
+
+  void _showCreateCollectorDialog(
+      BuildContext context, VideoSessionViewModel vm, List<DataField> fields) {
+    showDialog(
+      context: context,
+      builder: (context) => CreateCollectorDialog(
+          vm: vm, snapshotIndex: snapshotIndex, fields: fields),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.read<VideoSessionViewModel>();
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(Spacing.token16),
       decoration: BoxDecoration(
         color: Colors.black.withAlpha(55),
         borderRadius: BorderRadius.circular(12),
@@ -23,7 +36,7 @@ class SnapshotFieldList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // list of fields
+          // List of fields
           ...fields.map((f) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -39,11 +52,11 @@ class SnapshotFieldList extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          //collector button
+          // Collector button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _showCreateCollectorDialog(context, snapshot, fields),
+              onPressed: () => _showCreateCollectorDialog(context, vm, fields),
               icon: const Icon(Icons.add),
               label: const Text("Create Collector"),
               style: ElevatedButton.styleFrom(
@@ -55,41 +68,5 @@ class SnapshotFieldList extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void _showCreateCollectorDialog(
-      BuildContext context, Map<String, dynamic> snapshot, List<DataField> fields) async {
-    final TextEditingController nameCtrl = TextEditingController();
-    final vm = Provider.of<VideoSessionViewModel>(context, listen: false);
-    final collectorService = CollectorService();
-
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Name Collector"),
-        content: TextField(
-          controller: nameCtrl,
-          decoration:
-          const InputDecoration(hintText: "Collector name (e.g., Login Flow)"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(context, nameCtrl.text.trim()),
-            child: const Text("Create"),
-          ),
-        ],
-      ),
-    );
-
-    if (name == null || name.isEmpty) return;
-    collectorService.createAndSaveCollector(snapshot, fields, nameCtrl.text);
-    vm.clearDataFields();
-
-    NotificationService().showSuccess("Collector '$name' created!");
   }
 }

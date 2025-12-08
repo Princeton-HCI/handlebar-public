@@ -60,8 +60,60 @@ class _HandlebarAppState extends State<HandlebarApp> {
           final isTablet = context.width >= layoutTablet.tabletBreakpoint;
           final layoutTheme = isTablet ? layoutTablet : layoutMobile;
 
-          final handlebarTheme =
-              ThemeData(useMaterial3: true, extensions: [layoutTheme]);
+          final handlebarTheme = ThemeData(
+            useMaterial3: true,
+            scaffoldBackgroundColor: Colors.white,
+            cardTheme: const CardThemeData(
+              color: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+            appBarTheme: const AppBarThemeData(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+            bottomSheetTheme: const BottomSheetThemeData(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.black),
+              ),
+              enabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey),
+              ),
+            ),
+            outlinedButtonTheme: OutlinedButtonThemeData(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                surfaceTintColor: Colors.transparent,
+              ),
+            ),
+            filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                surfaceTintColor: Colors.transparent,
+              ),
+            ),
+            segmentedButtonTheme: SegmentedButtonThemeData(
+              style: SegmentedButton.styleFrom(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                selectedBackgroundColor: Colors.blue[200],
+              ),
+            ),
+            popupMenuTheme: const PopupMenuThemeData(
+              color: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+            extensions: [layoutTheme],
+          );
 
           return Theme(
             data: handlebarTheme,

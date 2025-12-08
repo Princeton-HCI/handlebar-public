@@ -43,11 +43,11 @@ class ResearchGroupRepository {
     }
   }
 
-  Future<GroupResult> getById(int id) async {
-    final action = 'getById($id)';
+  Future<GroupResult> lookupByCode(String code) async {
+    final action = 'lookupByCode';
     try {
       _logger.info('Starting $action request...');
-      final res = await _api.get('$_base/$id');
+      final res = await _api.get('$_base/lookup/$code');
 
       if (res.statusCode == 200) {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
@@ -91,6 +91,7 @@ class ResearchGroupRepository {
         final map = jsonDecode(res.body) as Map<String, dynamic>;
         final group =
             ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
+
         _logger.info('$action successful');
         return Success(group);
       }

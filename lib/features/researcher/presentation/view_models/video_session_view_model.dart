@@ -4,10 +4,12 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:handlebar/app/app_locator.dart';
 import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/network/api_client.dart';
 import '../../../crepe/data/snapshot_repository.dart';
 import '../../../crepe/models/data_field.dart';
 import '../../data/video_thumbnail_repository.dart';
@@ -17,6 +19,11 @@ enum Owner { video, timer, idle, user }
 
 class VideoSessionViewModel extends ChangeNotifier {
   static final _logger = Logger('VideoSessionViewModel');
+  final int groupId;
+
+  VideoSessionViewModel({
+    required this.groupId,
+  });
 
   // ================
   // State variables
@@ -39,6 +46,7 @@ class VideoSessionViewModel extends ChangeNotifier {
   ScrollController get timelineScrollController => _timelineScrollController;
 
   // ---- Public collector state ----
+  final ValueNotifier<Map<int, List<DataField>>> dataFields = ValueNotifier({});
   final ValueNotifier<bool> isCrepeQueryLoading = ValueNotifier(false);
 
   // ---- Public constants ----
@@ -63,7 +71,6 @@ class VideoSessionViewModel extends ChangeNotifier {
 
   // ---- Private collector state ----
   List<Snapshot> snapshots = []; // List of all loaded video snapshots
-  final Map<int, List<DataField>> dataFieldsForSnapshot = {};
 
   // ---- Private repositories ----
   final SnapshotRepository _snapshotRepo = SnapshotRepository();
@@ -684,19 +691,68 @@ class VideoSessionViewModel extends ChangeNotifier {
   void addDataField(
       Snapshot snapshot, String selectedQuery, String description) {
     final newDataField = DataField(
-      dataFieldId: DateTime.now().millisecondsSinceEpoch,
       graphQuery: selectedQuery,
       name: description,
     );
 
-    dataFieldsForSnapshot.putIfAbsent(currSnapshotIndex.value, () => []);
-    dataFieldsForSnapshot[currSnapshotIndex.value]!.add(newDataField);
-    notifyListeners();
+    final index = currSnapshotIndex.value;
+
+    final newMap = Map<int, List<DataField>>.of(dataFields.value);
+
+    newMap.putIfAbsent(index, () => []);
+    newMap[index]!.add(newDataField);
+
+    dataFields.value = newMap;
   }
 
-  void clearDataFields() {
-    dataFieldsForSnapshot.clear();
-    notifyListeners();
+  /// Clears all data fields for a given snapshot index
+  void removeDataFieldsForSnapshot(int index) {
+    final newMap = Map<int, List<DataField>>.of(dataFields.value);
+    newMap.remove(index);
+    dataFields.value = newMap;
+  }
+
+  /// Creates a collector from a given snapshot and data fields
+  Future<bool> createCollectorFromSnapshot({
+    required int snapshotIndex,
+    required String description,
+    required List<DataField> fields,
+  }) async {
+    if (snapshotIndex < 0 || snapshotIndex >= snapshots.length) {
+      errorMessage.value = "Invalid snapshot index";
+      return false;
+    }
+
+    final snapshotMetadata = snapshots[snapshotIndex].metadata;
+    final String appPackage = snapshotMetadata['packageName'] as String;
+    String? derivedAppName = snapshotMetadata['activityName'] as String?;
+
+    if (derivedAppName == null) {
+      final parts = appPackage.split('.');
+      if (parts.isNotEmpty) {
+        // Capitalize final part of the package name
+        derivedAppName =
+            "${parts.last[0].toUpperCase()}${parts.last.substring(1).toLowerCase()}";
+      } else {
+        derivedAppName = appPackage;
+      }
+    }
+
+    final res = await rgCollectorRepo.createCollectorAndAttach(
+      groupId: groupId,
+      appName: derivedAppName,
+      appPackage: appPackage,
+      description: description,
+      dataFields: fields,
+    );
+
+    return res.fold(onSuccess: (newCollector) {
+      removeDataFieldsForSnapshot(snapshotIndex);
+      return true;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+      return false;
+    });
   }
 
   // ==============

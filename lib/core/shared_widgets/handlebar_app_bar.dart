@@ -14,7 +14,6 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final scheme = context.colorScheme;
     return AppBar(
-      backgroundColor: scheme.surface,
       leading: IconButton(
           onPressed: onReturn ?? () => Navigator.pop(context),
           icon: Icon(
@@ -25,6 +24,7 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
         title,
         style: context.titleLarge!.copyWith(
           fontWeight: FontWeight.w600,
+          color: scheme.onSurface,
         ),
       ),
       toolbarHeight: context.scaled(Spacing.token64 - 1),

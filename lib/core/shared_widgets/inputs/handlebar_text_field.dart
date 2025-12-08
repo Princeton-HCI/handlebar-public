@@ -46,7 +46,6 @@ class HandlebarTextField extends StatelessWidget {
           prefixIcon: prefix,
           suffixIcon: suffix,
           filled: true,
-          fillColor: context.colorScheme.surface,
           contentPadding: EdgeInsets.symmetric(
             vertical: (minHeight - 24).clamp(0, double.infinity) / 2,
             horizontal: 12,

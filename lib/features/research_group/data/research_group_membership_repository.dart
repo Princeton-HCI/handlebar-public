@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/utils/result.dart';
 import '../models/research_group_member.dart';
 
+typedef MemberResult = Result<ResearchGroupMember, ApiError>;
 typedef MembersResult = Result<List<ResearchGroupMember>, ApiError>;
 typedef BoolResult = Result<bool, ApiError>;
 
@@ -49,7 +50,25 @@ class ResearchGroupMembershipRepository {
     }
   }
 
-  Future<BoolResult> addResearcherByEmail(int groupId, String email) async {
+  Future<MemberResult> getMyMembership(int groupId) async {
+    final action = 'getMyMembership($groupId)';
+    try {
+      final res = await _api.get('$_base/groups/$groupId/membership');
+
+      if (res.statusCode == 200) {
+        final map = jsonDecode(res.body) as Map<String, dynamic>;
+        final membership =
+            ResearchGroupMember.fromJson(map['data'] as Map<String, dynamic>);
+        return Success(membership);
+      }
+
+      return ApiClient.unhandledFailure(_logger, res, action: action);
+    } catch (e, st) {
+      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
+    }
+  }
+
+  Future<MemberResult> addResearcherByEmail(int groupId, String email) async {
     final action = 'addResearcherByEmail($groupId)';
     try {
       _logger.info('Starting $action request...');
@@ -59,8 +78,10 @@ class ResearchGroupMembershipRepository {
       );
 
       if (res.statusCode == 201) {
+        final map = jsonDecode(res.body) as Map<String, dynamic>;
+        final member = ResearchGroupMember.fromJson(map);
         _logger.info('$action successful');
-        return const Success(true);
+        return Success(member);
       }
 
       if (res.statusCode == 404) {
@@ -217,7 +238,7 @@ class ResearchGroupMembershipRepository {
     }
   }
 
-  Future<BoolResult> updateMembership({
+  Future<MemberResult> updateMembership({
     required int membershipId,
     required String retentionPref,
   }) async {
@@ -234,8 +255,11 @@ class ResearchGroupMembershipRepository {
       );
 
       if (res.statusCode == 200) {
+        final map = jsonDecode(res.body) as Map<String, dynamic>;
+        final updatedMembership =
+            ResearchGroupMember.fromJson(map['data'] as Map<String, dynamic>);
         _logger.info('$action successful');
-        return const Success(true);
+        return Success(updatedMembership);
       }
 
       if (ApiClient.isForbidden(res)) {

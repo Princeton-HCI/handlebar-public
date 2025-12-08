@@ -4,15 +4,14 @@ import 'package:logging/logging.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/result.dart';
-import '../../crepe/models/active_collectors.dart';
 import '../../crepe/models/collector.dart';
 import '../../crepe/models/data_field.dart';
 import '../../crepe/models/participant_collector.dart';
 
-typedef ActiveCollectorsResult = Result<ActiveCollectors, ApiError>;
 typedef ParticipantCollectorsResult
     = Result<List<ParticipantCollector>, ApiError>;
 typedef CollectorsResult = Result<List<Collector>, ApiError>;
+typedef CollectorResult = Result<Collector, ApiError>;
 typedef BoolResult = Result<bool, ApiError>;
 
 class ResearchGroupCollectorRepository {
@@ -105,7 +104,7 @@ class ResearchGroupCollectorRepository {
     }
   }
 
-  Future<BoolResult> createCollectorAndAttach({
+  Future<CollectorResult> createCollectorAndAttach({
     required int groupId,
     required String appName,
     required String appPackage,
@@ -134,8 +133,11 @@ class ResearchGroupCollectorRepository {
       final res = await _api.post('$_base/$groupId/collectors', body: body);
 
       if (res.statusCode == 201) {
+        final map = jsonDecode(res.body) as Map<String, dynamic>;
+        final collector =
+            Collector.fromJson(map['data'] as Map<String, dynamic>);
         _logger.info("$action successful");
-        return const Success(true);
+        return Success(collector);
       }
 
       if (ApiClient.isUnauthorized(res)) {

@@ -80,6 +80,13 @@ class ApiClient {
     return '';
   }
 
+  static Map<String, String> buildPaginationParams(String? cursor, int? limit) {
+    final params = <String, String>{};
+    if (cursor != null) params['after'] = cursor;
+    if (limit != null) params['limit'] = limit.toString();
+    return params;
+  }
+
   /// 401 = not authenticated / token missing/bad
   static bool isUnauthorized(http.Response res) => res.statusCode == 401;
 
@@ -117,7 +124,8 @@ class ApiClient {
   }) {
     final msg = errorMessage(res);
     logger.severe('$action failed - unhandled $msg');
-    return Failure(ApiError(message: msg, statusCode: res.statusCode));
+    return Failure(ApiError(
+        message: "An unexpected error occurred", statusCode: res.statusCode));
   }
 
   static Failure<T, ApiError> connectionFailure<T>(
@@ -148,8 +156,8 @@ class ApiClient {
 class ApiException implements Exception {
   final String message;
   const ApiException._(this.message);
-  const ApiException.timeout() : this._("Server timeout");
-  const ApiException.network() : this._("Network unreachable");
+  const ApiException.timeout() : this._("The connection has timed out");
+  const ApiException.network() : this._("The network is unreachable");
   @override
   String toString() => message;
 }

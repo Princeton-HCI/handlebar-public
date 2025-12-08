@@ -1,14 +1,16 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 
+import '../../../core/utils/paginated_result.dart';
 import '../../../core/utils/result.dart';
 import '../models/crepe_event.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/auth_token_store.dart';
 
 typedef CrepeEventSendResult = Result<bool, ApiError>;
-typedef CrepeEventsListResult = Result<List<CrepeEvent>, ApiError>;
+typedef CrepeEventsPageResult = Result<PaginatedResult<CrepeEvent>, ApiError>;
 
 /// Handles [CrepeEvent] data operations
 class CrepeEventRepository {
@@ -20,34 +22,21 @@ class CrepeEventRepository {
 
   static const String _base = '/api/research';
 
-  Future<CrepeEventsListResult> listParticipantEvents({int? groupId}) async {
+  Future<CrepeEventsPageResult> listParticipantEvents(
+      {int? groupId, String? cursor, int limit = 30}) async {
     const String action = 'listParticipantEvents';
 
     try {
       _logger.info('Starting $action request...');
-      final query = <String, String>{};
-      if (groupId != null) {
-        query['group_id'] = groupId.toString();
-      }
+      final query = ApiClient.buildPaginationParams(cursor, limit);
+      if (groupId != null) query['group_id'] = groupId.toString();
 
       final res = await _api.get(
         '$_base/me/crepe-events',
         queryParameters: query.isEmpty ? null : query,
       );
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final items = (map['data'] as List).cast<Map<String, dynamic>>();
-        final events = items.map(CrepeEvent.fromJson).toList();
-        _logger.info('$action successful');
-        return Success(events);
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
+      return _parseListResponse(res, action);
     } on ApiException catch (e) {
       return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
@@ -55,31 +44,15 @@ class CrepeEventRepository {
     }
   }
 
-  Future<CrepeEventsListResult> listResearcherEventsForGroup(
-      int groupId) async {
+  Future<CrepeEventsPageResult> listResearcherEventsForGroup(int groupId,
+      {String? cursor, int limit = 30}) async {
     const String action = 'listResearcherEventsForGroup';
-
     try {
-      _logger.info('Starting $action($groupId) request...');
-      final res = await _api.get('$_base/groups/$groupId/crepe-events');
+      final query = ApiClient.buildPaginationParams(cursor, limit);
+      final res = await _api.get('$_base/groups/$groupId/crepe-events',
+          queryParameters: query.isEmpty ? null : query);
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final items = (map['data'] as List).cast<Map<String, dynamic>>();
-        final events = items.map(CrepeEvent.fromJson).toList();
-        _logger.info('$action successful');
-        return Success(events);
-      }
-
-      if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: action);
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
+      return _parseListResponse(res, action);
     } on ApiException catch (e) {
       return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
@@ -87,24 +60,22 @@ class CrepeEventRepository {
     }
   }
 
-  Future<CrepeEventsListResult> listResearcherEventsForParticipant({
+  Future<CrepeEventsPageResult> listResearcherEventsForParticipant({
     required int groupId,
     required int membershipId,
+    String? cursor,
+    int limit = 30,
   }) async {
     const String action = 'listResearcherEventsForParticipant';
 
     try {
       _logger.info('Starting $action($groupId, $membershipId) request...');
-      final res = await _api
-          .get('$_base/groups/$groupId/members/$membershipId/crepe-events');
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final items = (map['data'] as List).cast<Map<String, dynamic>>();
-        final events = items.map(CrepeEvent.fromJson).toList();
-        _logger.info('$action successful');
-        return Success(events);
-      }
+      final query = ApiClient.buildPaginationParams(cursor, limit);
+      final res = await _api.get(
+        '$_base/groups/$groupId/members/$membershipId/crepe-events',
+        queryParameters: query.isEmpty ? null : query,
+      );
 
       if (res.statusCode == 404) {
         final msg = 'Membership not found';
@@ -112,20 +83,34 @@ class CrepeEventRepository {
         return Failure(ApiError(message: msg, statusCode: 404));
       }
 
-      if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: action);
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
+      return _parseListResponse(res, action);
     } on ApiException catch (e) {
       return ApiClient.connectionFailure(_logger, e, action: action);
     } catch (e, st) {
       return ApiClient.unexpectedFailure(_logger, e, st, action: action);
     }
+  }
+
+  CrepeEventsPageResult _parseListResponse(http.Response res, String action) {
+    if (res.statusCode == 200) {
+      final map = jsonDecode(res.body) as Map<String, dynamic>;
+
+      final page =
+          PaginatedResult<CrepeEvent>.fromJson(map, CrepeEvent.fromJson);
+
+      _logger.info('$action successful');
+      return Success(page);
+    }
+
+    if (ApiClient.isForbidden(res)) {
+      return ApiClient.forbiddenFailure(_logger, action: action);
+    }
+
+    if (ApiClient.isUnauthorized(res)) {
+      return ApiClient.unauthorizedFailure(_logger, action: action);
+    }
+
+    return ApiClient.unhandledFailure(_logger, res, action: action);
   }
 
   /// Sends a Crepe event to the backend (Participant)

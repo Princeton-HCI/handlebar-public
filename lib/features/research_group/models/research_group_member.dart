@@ -7,7 +7,7 @@ class ResearchGroupMember {
   final String role; // "researcher" | "participant"
   final DateTime enrolledAt;
   final DateTime? unenrolledAt; // null if the participant is active
-  final String retentionPref;
+  final String retentionPref; // "delete_all" | "keep_collected"
 
   const ResearchGroupMember({
     required this.membershipId,
@@ -26,8 +26,6 @@ class ResearchGroupMember {
 
   bool get isResearcher => role == 'researcher';
 
-  bool get isParticipant => role == 'participant';
-
   factory ResearchGroupMember.fromJson(Map<String, dynamic> j) =>
       ResearchGroupMember(
         membershipId: j['membership_id'] as int,
@@ -41,4 +39,26 @@ class ResearchGroupMember {
             : null,
         retentionPref: j['retention_pref_on_unenroll'] as String,
       );
+
+  ResearchGroupMember copyWith({
+    int? membershipId,
+    int? userId,
+    String? firstName,
+    String? lastName,
+    String? role,
+    DateTime? enrolledAt,
+    DateTime? unenrolledAt,
+    String? retentionPref,
+  }) {
+    return ResearchGroupMember(
+      membershipId: membershipId ?? this.membershipId,
+      userId: userId ?? this.userId,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      role: role ?? this.role,
+      enrolledAt: enrolledAt ?? this.enrolledAt,
+      unenrolledAt: unenrolledAt ?? this.unenrolledAt,
+      retentionPref: retentionPref ?? this.retentionPref,
+    );
+  }
 }

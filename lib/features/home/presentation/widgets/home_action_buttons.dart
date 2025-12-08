@@ -78,6 +78,13 @@ class HomeActionButtons extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PlatformElevatedButton(
+          onPressed: () {
+            context.go('/dashboard');
+          },
+          child: const Text('Research Group Dashboard'),
+        ),
+        const SizedBox(height: 16),
+        PlatformElevatedButton(
           onPressed: _enableAccessibilityService,
           child: const Text('Enable Accessibility Service'),
         ),
@@ -85,16 +92,6 @@ class HomeActionButtons extends StatelessWidget {
         PlatformElevatedButton(
           onPressed: _testCollectors,
           child: const Text('Enable Monitoring'),
-        ),
-        const SizedBox(height: 16),
-        PlatformElevatedButton(
-          onPressed: () async {
-            await _testCollectors();
-            if (context.mounted) {
-              context.go('/replay-snapshot');
-            }
-          },
-          child: const Text('Replay Snapshot'),
         ),
       ],
     );

@@ -9,41 +9,29 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/shared_services/notification_service.dart';
 import '../../../../app/design-system/spacing.dart';
+import '../../../crepe/models/data_field.dart';
 import '../../../crepe/models/snapshot_entity_queries.dart';
 import '../view_models/video_session_view_model.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_button.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_icon_button.dart';
 import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_segment_group.dart';
-import '../../../../core/shared_widgets/static_responsive_scaffold.dart';
+import '../../../../core/shared_widgets/scaffolds/static_responsive_scaffold.dart';
 import '../widgets/select_query_bottom_sheet.dart';
 import '../widgets/snapshot_field_list.dart';
 import '../widgets/snapshot_overlay.dart';
 
 /// Top-level widget for the Researcher Settings screen
-class ResearcherSettings extends StatelessWidget {
+
+/// Main stateful widget for the Researcher Settings screen that builds the UI
+class ResearcherSettings extends StatefulWidget {
   const ResearcherSettings({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Provide VideoSessionViewModel to all children
-    return ChangeNotifierProvider(
-        create: (_) => VideoSessionViewModel(),
-        child: const _ResearcherSettingsContainer());
-  }
+  State<ResearcherSettings> createState() => _ResearcherSettingsState();
 }
 
-/// Main stateful widget for the Researcher Settings screen that builds the UI
-class _ResearcherSettingsContainer extends StatefulWidget {
-  const _ResearcherSettingsContainer();
-
-  @override
-  State<_ResearcherSettingsContainer> createState() =>
-      _ResearcherSettingsContainerState();
-}
-
-class _ResearcherSettingsContainerState
-    extends State<_ResearcherSettingsContainer> {
+class _ResearcherSettingsState extends State<ResearcherSettings> {
   int _selectedTab = 0;
 
   @override
@@ -155,7 +143,7 @@ class _ResearcherSettingsContainerState
 
     return StaticResponsiveScaffold(
         appBar: HandlebarAppBar(
-            title: "Researcher Settings", onReturn: () => context.go('/')),
+            title: "Researcher Settings", onReturn: () => context.pop()),
         child: Column(
           children: [body, errorListener],
         ));
@@ -341,8 +329,7 @@ class _VideoPlayerContainer extends StatelessWidget {
                           );
                         },
                       ),
-                    )
-                ),
+                    )),
                 Positioned(
                   bottom: 16,
                   left: 16,
@@ -350,16 +337,20 @@ class _VideoPlayerContainer extends StatelessWidget {
                   child: ValueListenableBuilder<int>(
                     valueListenable: vm.currSnapshotIndex,
                     builder: (context, index, _) {
-                      return AnimatedBuilder( animation: vm,
-                      builder: (_, __) {
-                        final fields = vm.dataFieldsForSnapshot[index] ?? [];
-                        final snapshot = vm.snapshots[index].metadata;
+                      return ValueListenableBuilder<Map<int, List<DataField>>>(
+                        valueListenable: vm.dataFields,
+                        builder: (context, allFieldsMap, _) {
+                          final fields = allFieldsMap[index] ?? [];
 
-                        // If empty, render nothing
-                        if (fields.isEmpty) return const SizedBox.shrink();
+                          // TODO: confirm if we need this first check
+                          if (index >= vm.snapshots.length)
+                            return const SizedBox.shrink();
+                          if (fields.isEmpty) return const SizedBox.shrink();
 
-                        return SnapshotFieldList(snapshot: snapshot, fields: fields);
-                      });
+                          return SnapshotFieldList(
+                              snapshotIndex: index, fields: fields);
+                        },
+                      );
                     },
                   ),
                 ),
@@ -515,8 +506,7 @@ class _VideoTimelineSliderState extends State<_VideoTimelineSlider>
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.read<VideoSessionViewModel>();
-    final controller = vm.videoController!;
+    final controller = _vm.videoController!;
 
     final videoDurationSecs = controller.value.duration.inMilliseconds / 1000.0;
     if (videoDurationSecs <= 0) {
@@ -547,7 +537,7 @@ class _VideoTimelineSliderState extends State<_VideoTimelineSlider>
           BorderSide(color: context.colorScheme.onSurface, width: borderWidth);
 
       final timeline = ListView.builder(
-        controller: vm.timelineScrollController,
+        controller: _vm.timelineScrollController,
         scrollDirection: Axis.horizontal,
         physics: const ClampingScrollPhysics(),
         itemCount: numberOfThumbnails + 2,
@@ -613,9 +603,9 @@ class _VideoTimelineSliderState extends State<_VideoTimelineSlider>
               // itself during scroll
               if (n is ScrollStartNotification && n.dragDetails != null) {
                 _anim!.cancel();
-                vm.onTimelineScrollStart();
+                _vm.onTimelineScrollStart();
               } else if (n is ScrollEndNotification) {
-                vm.onTimelineScrollEnd(n.metrics.pixels);
+                _vm.onTimelineScrollEnd(n.metrics.pixels);
               }
               return false;
             },

@@ -13,7 +13,7 @@ import '../../../../core/shared_widgets/buttons/handlebar_button.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_segment_group.dart';
 import '../../../../core/shared_widgets/inputs/handlebar_text_field.dart';
 import '../../../../core/shared_widgets/inputs/interaction_blocker.dart';
-import '../../../../core/shared_widgets/static_responsive_scaffold.dart';
+import '../../../../core/shared_widgets/scaffolds/static_responsive_scaffold.dart';
 
 enum _AuthMode { login, signup }
 

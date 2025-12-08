@@ -12,7 +12,7 @@ class DropShadowContainer extends StatelessWidget {
       {super.key,
       required this.child,
       this.borderRadius = 0.0,
-      this.elevation = 3.0});
+      this.elevation = 2.0});
 
   @override
   Widget build(BuildContext context) {

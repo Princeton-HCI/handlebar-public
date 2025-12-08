@@ -1,7 +1,13 @@
+import 'package:handlebar/features/research_group/presentation/views/research_group_dashboard.dart';
+import 'package:handlebar/features/researcher/presentation/view_models/video_session_view_model.dart';
 import 'package:handlebar/features/researcher/presentation/views/researcher_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../features/research_group/models/research_group.dart';
+import '../features/research_group/presentation/view_models/research_group_detail_view_model.dart';
+import '../features/research_group/presentation/views/research_group_detail.dart';
 import 'app_locator.dart';
 import '../features/home/presentation/views/home.dart';
 import '../features/auth/presentation/views/login.dart';
@@ -46,11 +52,30 @@ GoRouter navigationRouter() {
         },
       ),
       GoRoute(
-        path: '/replay-snapshot',
-        builder: (BuildContext context, GoRouterState state) {
-          return const ResearcherSettings();
-        },
-      ),
+          path: '/dashboard',
+          builder: (BuildContext context, GoRouterState state) {
+            return const ResearchGroupDashboard();
+          }),
+      GoRoute(
+          path: '/group-detail',
+          builder: (BuildContext context, GoRouterState state) {
+            final group = state.extra as ResearchGroup;
+
+            return ChangeNotifierProvider(
+              create: (_) => ResearchGroupDetailViewModel(initialGroup: group),
+              child: const ResearchGroupDetail(),
+            );
+          }),
+      GoRoute(
+          path: '/define-collector',
+          builder: (BuildContext context, GoRouterState state) {
+            final groupId = state.extra as int;
+
+            return ChangeNotifierProvider(
+              create: (_) => VideoSessionViewModel(groupId: groupId),
+              child: const ResearcherSettings(),
+            );
+          }),
     ],
   );
 }
