@@ -284,82 +284,74 @@ class _VideoPlayerContainer extends StatelessWidget {
         determinePortraitAspectRatio(controller.value.aspectRatio);
 
     return AspectRatio(
-      aspectRatio: displayAspectRatio,
-      child: Container(
-        color: Colors.black,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final videoSize = controller.value.size;
-            final displaySize =
-                Size(constraints.maxWidth, constraints.maxHeight);
+        aspectRatio: displayAspectRatio,
+        child: Container(
+            color: Colors.black,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final videoSize = controller.value.size;
+                final containerSize =
+                    Size(constraints.maxWidth, constraints.maxHeight);
 
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                // Video player
-                FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox(
-                    width: videoSize.width,
-                    height: videoSize.height,
-                    child: VideoPlayer(controller),
-                  ),
-                ),
-                FittedBox(
+                return Stack(alignment: Alignment.center, children: [
+                  // Video player
+                  FittedBox(
                     fit: BoxFit.contain,
                     child: SizedBox(
                       width: videoSize.width,
                       height: videoSize.height,
-                      child: ValueListenableBuilder<int>(
-                        valueListenable: vm.currSnapshotIndex,
-                        builder: (context, index, _) {
-                          final snapshot = vm.snapshots[index];
-
-                          return SnapshotOverlay(
-                            snapshot: snapshot,
-                            referenceSize: videoSize,
-                            displaySize: displaySize,
-                            onEntityTap: (entityIndex, entity) {
-                              _handleEntityTap(
-                                context,
-                                entity,
-                                snapshot,
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    )),
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: vm.currSnapshotIndex,
-                    builder: (context, index, _) {
-                      return ValueListenableBuilder<Map<int, List<DataField>>>(
-                        valueListenable: vm.dataFields,
-                        builder: (context, allFieldsMap, _) {
-                          final fields = allFieldsMap[index] ?? [];
-
-                          // TODO: confirm if we need this first check
-                          if (index >= vm.snapshots.length)
-                            return const SizedBox.shrink();
-                          if (fields.isEmpty) return const SizedBox.shrink();
-
-                          return SnapshotFieldList(
-                              snapshotIndex: index, fields: fields);
-                        },
-                      );
-                    },
+                      child: VideoPlayer(controller),
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
+
+                  // Overlay
+                  SizedBox(
+                    width: containerSize.width,
+                    height: containerSize.height,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: vm.currSnapshotIndex,
+                      builder: (context, index, _) {
+                        final snapshot = vm.snapshots[index];
+
+                        return SnapshotOverlay(
+                          snapshot: snapshot,
+                          videoSize: videoSize,
+                          containerSize: containerSize,
+                          originalDeviceSize: vm.deviceSize,
+                          onEntityTap: (entityIndex, entity) =>
+                              _handleEntityTap(context, entity, snapshot),
+                        );
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: vm.currSnapshotIndex,
+                      builder: (context, index, _) {
+                        return ValueListenableBuilder<
+                            Map<int, List<DataField>>>(
+                          valueListenable: vm.dataFields,
+                          builder: (context, allFieldsMap, _) {
+                            final fields = allFieldsMap[index] ?? [];
+
+                            // TODO: confirm if we need this first check
+                            if (index >= vm.snapshots.length)
+                              return const SizedBox.shrink();
+                            if (fields.isEmpty) return const SizedBox.shrink();
+
+                            return SnapshotFieldList(
+                                snapshotIndex: index, fields: fields);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ]);
+              },
+            )));
   }
 }
 

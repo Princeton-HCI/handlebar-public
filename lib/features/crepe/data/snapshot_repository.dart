@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:archive/archive_io.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
@@ -15,16 +16,32 @@ class SnapshotRepository {
   final CrepePlugin _plugin = CrepePlugin();
 
   /// Loads raw snapshot JSONs from a ZIP file into a list of [Snapshot] objects
-  Future<List<Snapshot>> loadSnapshotsFromZip(File zipFile) async {
+  Future<RecordingData> loadSnapshotsFromZip(File zipFile) async {
     final bytes = await zipFile.readAsBytes();
     List<Map<String, dynamic>> rawSnapshots = [];
+    Size deviceSize = Size(0, 0);
 
     try {
       final archive = ZipDecoder().decodeBytes(bytes);
 
-      // Extract valid JSON snapshots
       for (final file in archive) {
+        if (file.name.contains('metadata')) {
+          // Extract the recording's metadata (device screen width + height)
+          try {
+            final content = utf8.decode(file.content as List<int>);
+            final json = jsonDecode(content);
+            deviceSize = Size(
+              (json['screenWidth'] as num).toDouble(),
+              (json['screenHeight'] as num).toDouble(),
+            );
+          } catch (e) {
+            _logger.warning('Failed to parse metadata file', e);
+          }
+          continue;
+        }
+
         if (file.isFile && file.name.endsWith('.json')) {
+          // Extract snapshot JSON
           try {
             final content = utf8.decode(file.content as List<int>);
             final decoded = jsonDecode(content);
@@ -62,7 +79,7 @@ class SnapshotRepository {
     _logger.info(
         'Loaded ${snapshots.length} snapshots from $zipFile successfully');
 
-    return snapshots;
+    return RecordingData(snapshots, deviceSize);
   }
 
   /// Returns graph queries for a snapshot [entity] in the context of the given
@@ -74,7 +91,6 @@ class SnapshotRepository {
     try {
       final String snapshotJson = jsonEncode(snapshot.toPluginJson());
       final int targetEntityId = entity['entityId'] as int;
-
       final rawQueries =
           await _plugin.generateQueries(snapshotJson, targetEntityId);
       return SnapshotEntityQueries.fromJson(rawQueries);
@@ -92,4 +108,12 @@ class SnapshotLoadException implements Exception {
 
   @override
   String toString() => 'SnapshotLoadException: $message';
+}
+
+/// Class to hold snapshots and the recording device size
+class RecordingData {
+  final List<Snapshot> snapshots;
+  final Size recordingDeviceSize;
+
+  RecordingData(this.snapshots, this.recordingDeviceSize);
 }

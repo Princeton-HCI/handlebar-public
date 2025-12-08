@@ -71,6 +71,7 @@ class VideoSessionViewModel extends ChangeNotifier {
 
   // ---- Private collector state ----
   List<Snapshot> snapshots = []; // List of all loaded video snapshots
+  Size deviceSize = Size(0, 0);
 
   // ---- Private repositories ----
   final SnapshotRepository _snapshotRepo = SnapshotRepository();
@@ -117,7 +118,9 @@ class VideoSessionViewModel extends ChangeNotifier {
       }
 
       final zipFile = File(zipResult.files.single.path!);
-      snapshots = await _snapshotRepo.loadSnapshotsFromZip(zipFile);
+      RecordingData data = await _snapshotRepo.loadSnapshotsFromZip(zipFile);
+      snapshots = data.snapshots;
+      deviceSize = data.recordingDeviceSize;
 
       // Prompt for the accompanying video file
       final videoResult =

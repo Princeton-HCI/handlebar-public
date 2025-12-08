@@ -79,7 +79,7 @@ class HomeActionButtons extends StatelessWidget {
         const SizedBox(height: 16),
         PlatformElevatedButton(
           onPressed: () {
-            context.go('/dashboard');
+            context.push('/dashboard');
           },
           child: const Text('Research Group Dashboard'),
         ),

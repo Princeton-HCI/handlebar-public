@@ -225,10 +225,9 @@ class UiSnapshotRecordingService {
     int screenHeight;
     int screenWidth;
     try {
-      final view = WidgetsBinding.instance.platformDispatcher.views.first;
-      final physicalSize = view.physicalSize;
-      screenHeight = physicalSize.height.toInt();
-      screenWidth = physicalSize.width.toInt();
+      final display = WidgetsBinding.instance.platformDispatcher.displays.first;
+      screenHeight = display.size.height.toInt();
+      screenWidth = display.size.width.toInt();
     } catch (e) {
       _logger.severe('Failed to get screen dimensions: $e');
       throw Exception('Failed to get screen dimensions: $e');
