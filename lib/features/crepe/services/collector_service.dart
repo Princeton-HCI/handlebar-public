@@ -1,16 +1,12 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:handlebar/features/crepe/models/active_collectors.dart';
 import 'package:handlebar/features/crepe/models/collector_match.dart';
 import 'package:handlebar/features/crepe/models/match_result.dart';
 import 'package:handlebar/core/shared_services/notification_service.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../../app/app_locator.dart';
-import '../models/collector.dart';
 import '../models/crepe_event.dart';
-import '../models/data_field.dart';
 
 // Service to manage active collectors from the backend
 // Handles fetching, parsing, and setting up collectors with the plugin
@@ -156,37 +152,6 @@ class CollectorService {
     }
 
     return success;
-  }
-
-  Future<bool> createAndSaveCollector(
-      Map<String, dynamic> snapshot, List<DataField> dataFields, String description) async {
-    log('Creating collector with data: $json');
-    try {
-      // Extract fields from the single entity
-      final String appPackage = snapshot['packageName'] as String;
-      final String appName = snapshot['packageName'] as String; // Fallback to packageName since no metadata
-
-      // Create Collector instance
-      final collector = Collector(
-        collectorId: 1, // Assuming a default ID, adjust as needed
-        appName: appName,
-        appPackage: appPackage,
-        description: description,
-        dataFields: dataFields,
-      );
-
-      // Save collector to local device directory
-      final directory = await getApplicationDocumentsDirectory();
-      final collectorsDir = Directory('${directory.path}/collectors');
-      await collectorsDir.create(
-          recursive: true); // Create directory recursively
-      await File('${collectorsDir.path}/${collector.collectorId}.json')
-          .writeAsString(jsonEncode(collector.toJson()));
-      return true;
-    } catch (e) {
-      log('Error creating collector: $e');
-      return false;
-    }
   }
 
   /// Test active collectors functionality - for testing/debugging
