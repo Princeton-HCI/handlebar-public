@@ -1,7 +1,9 @@
+import 'crepe_event_values.dart';
+
 /// Represents the graph queries generated for a [Snapshot]
 class SnapshotEntityQueries {
-  /// All generated queries
-  final List<String> allQueries;
+  /// All generated queries (each elem contains 'query', 'score', and 'extractedValue')
+  final List<SnapshotQuery> allQueries;
 
   /// Index of the best query in [allQueries], or -1 if none.
   final int bestQueryIndex;
@@ -11,7 +13,7 @@ class SnapshotEntityQueries {
     required this.bestQueryIndex,
   });
 
-  String? get bestQuery {
+  SnapshotQuery? get bestQuery {
     if (bestQueryIndex < 0 || bestQueryIndex >= allQueries.length) {
       return null;
     }
@@ -23,12 +25,34 @@ class SnapshotEntityQueries {
     final allQueriesList = json['allQueries'] as List<dynamic>? ?? [];
 
     return SnapshotEntityQueries(
-      // NOTE: we're getting rid of the 'score' part of 'qs' since we
-      // don't care about displaying it at this moment
-      allQueries: allQueriesList
-          .map((qs) => Map<String, dynamic>.from(qs)['query'] as String)
-          .toList(),
+      allQueries: allQueriesList.map((qs) {
+        // Coerce received maps into proper types
+        final typedMap = Map<String, dynamic>.from(qs as Map);
+        typedMap['crepeEventValues'] =
+            Map<String, dynamic>.from(typedMap['crepeEventValues'] as Map);
+
+        return SnapshotQuery.fromJson(typedMap);
+      }).toList(),
       bestQueryIndex: json['bestQueryIndex'] as int? ?? -1,
     );
+  }
+}
+
+/// Represents a single graph query generated from a snapshot
+class SnapshotQuery {
+  final String query;
+  final double score;
+  final CrepeEventValues crepeEventValues;
+
+  const SnapshotQuery(
+      {required this.query,
+      required this.score,
+      required this.crepeEventValues});
+
+  factory SnapshotQuery.fromJson(Map<String, dynamic> json) {
+    return SnapshotQuery(
+        query: json['query'] as String,
+        score: json['score'] as double,
+        crepeEventValues: CrepeEventValues.fromJson(json['crepeEventValues']));
   }
 }

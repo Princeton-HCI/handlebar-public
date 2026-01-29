@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'crepe_event_values.dart';
+
 /// Represents a collected data event that contains the actual content gathered
 /// from an app at a specific timestamp, associated with a particular data field
 /// and research group membership.
@@ -62,13 +64,9 @@ class CrepeEvent {
     return json['dataFieldName'] ?? 'Unknown Field';
   }
 
-  String get capturedValue {
-    final json = parsedContent;
-    final val = json['value'];
-    if (val == null || val.toString().trim().isEmpty) {
-      return "N/A";
-    }
-    return val.toString();
+  CrepeEventValues get capturedValues {
+    final contentJson = parsedContent;
+    return CrepeEventValues.fromJson(contentJson['values']);
   }
 
   @override

@@ -215,8 +215,6 @@ class _VideoPlayerContainer extends StatelessWidget {
           final mediaQuery = MediaQuery.of(ctx);
           final maxHeight = mediaQuery.size.height * 0.75;
 
-          final entityFields = entity["value"];
-
           return Container(
             constraints: BoxConstraints(
               maxHeight: maxHeight,
@@ -227,9 +225,6 @@ class _VideoPlayerContainer extends StatelessWidget {
                   const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: SelectQueryBottomSheet(
-              entityName: entityFields['text'] ??
-                  entityFields['contentDescription'] ??
-                  'Unknown element',
               allQueries: queries.allQueries,
               bestQueryIndex: queries.bestQueryIndex,
             ),

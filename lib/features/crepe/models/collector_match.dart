@@ -1,5 +1,7 @@
 import 'dart:developer';
 
+import 'crepe_event_values.dart';
+
 /// Represents a successful match between collected data and a data field,
 /// containing the matched value and metadata about who triggered the match
 /// and when it occurred
@@ -7,7 +9,7 @@ class CollectorMatch {
   final int dataFieldId;
   final int membershipId;
   final int? collectorId;
-  final String value;
+  final CrepeEventValues values;
   final List<dynamic> matchedNodes;
   final String? dataFieldName;
   final DateTime matchedAt;
@@ -16,7 +18,7 @@ class CollectorMatch {
     required this.dataFieldId,
     required this.membershipId,
     this.collectorId,
-    required this.value,
+    required this.values,
     required this.matchedNodes,
     this.dataFieldName,
     DateTime? matchedAt,
@@ -28,7 +30,9 @@ class CollectorMatch {
       membershipId: _parseId(json['membership_id']),
       collectorId:
           json['collectorId'] != null ? _parseId(json['collectorId']) : null,
-      value: json['value']?.toString() ?? json['content']?.toString() ?? '',
+      values: CrepeEventValues.fromJson(
+        Map<String, dynamic>.from(json['values'] as Map? ?? {}),
+      ),
       matchedNodes: json['matchedNodes'] as List<dynamic>? ?? [],
       dataFieldName: json['name']?.toString(),
       matchedAt: json['matchedAt'] != null
@@ -54,7 +58,7 @@ class CollectorMatch {
 
   Map<String, dynamic> toContentJson() {
     return {
-      'value': value,
+      'values': values,
       'matchedNodes': matchedNodes,
       'dataFieldName': dataFieldName,
       'matchedAt': matchedAt.toIso8601String(),
@@ -66,7 +70,7 @@ class CollectorMatch {
       'data_field_id': dataFieldId,
       'membership_id': membershipId,
       'collectorId': collectorId,
-      'value': value,
+      'values': values.toJson(),
       'matchedNodes': matchedNodes,
       'dataFieldName': dataFieldName,
       'matchedAt': matchedAt.toIso8601String(),

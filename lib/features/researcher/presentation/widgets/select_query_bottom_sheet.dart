@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
 import 'package:handlebar/core/shared_widgets/buttons/handlebar_button.dart';
+import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
+import 'package:handlebar/features/researcher/presentation/widgets/crepe_event_values_list.dart';
 
 import '../../../../app/design-system/spacing.dart';
+import '../../../crepe/models/crepe_event_values.dart';
 
 /// Bottom sheet that displays all graph queries for a [Snapshot] entity
 /// and allows the user to select one of them
 class SelectQueryBottomSheet extends StatefulWidget {
-  final String entityName;
-  final List<String> allQueries;
+  final List<SnapshotQuery> allQueries;
   final int bestQueryIndex;
 
   const SelectQueryBottomSheet({
     super.key,
-    required this.entityName,
     required this.allQueries,
     required this.bestQueryIndex,
   });
@@ -30,14 +31,14 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
     super.initState();
 
     // Set the default query to best query (if generated) or the first query
-    String defaultQuery;
+    SnapshotQuery defaultQuery;
     if (widget.bestQueryIndex != -1 &&
         widget.bestQueryIndex < widget.allQueries.length) {
       defaultQuery = widget.allQueries[widget.bestQueryIndex];
     } else {
       defaultQuery = widget.allQueries[0];
     }
-    _selectedQueryString = defaultQuery;
+    _selectedQueryString = defaultQuery.query;
   }
 
   @override
@@ -83,11 +84,13 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
               shrinkWrap: true,
               itemCount: widget.allQueries.length,
               itemBuilder: (context, index) {
-                final queryString = widget.allQueries[index];
-                final isBest = (index == widget.bestQueryIndex);
+                final SnapshotQuery q = widget.allQueries[index];
+                final String queryString = q.query;
+                final CrepeEventValues crepeEventValues = q.crepeEventValues;
 
+                final isBest = (index == widget.bestQueryIndex);
                 return _QueryCard(
-                  entityName: widget.entityName,
+                  crepeEventValues: crepeEventValues,
                   queryString: queryString,
                   isBest: isBest,
                   isSelected: _selectedQueryString == queryString,
@@ -123,14 +126,14 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
 }
 
 class _QueryCard extends StatelessWidget {
-  final String entityName;
+  final CrepeEventValues crepeEventValues;
   final String queryString;
   final bool isBest;
   final bool isSelected;
   final VoidCallback onSelected;
 
   const _QueryCard({
-    required this.entityName,
+    required this.crepeEventValues,
     required this.queryString,
     required this.isBest,
     required this.isSelected,
@@ -163,10 +166,7 @@ class _QueryCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('"$entityName"',
-                            style: context.labelLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontStyle: FontStyle.italic)),
+                        CrepeEventValuesList(values: crepeEventValues),
                         Spacing.vSpace8,
                         Text(
                           'Query:',
