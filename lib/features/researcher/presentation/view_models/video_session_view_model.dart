@@ -660,30 +660,36 @@ class VideoSessionViewModel extends ChangeNotifier {
   // Collector methods
   // ==============
 
-  /// Returns the graph queries for the [entity] in the context of the [snapshot]
-  Future<SnapshotEntityQueries?> getQueriesForEntity(
-      Snapshot snapshot, Map<String, dynamic> entity) async {
+  /// Returns the graph queries for the [hitEntities] in the context of the [snapshot]
+  Future<List<SnapshotEntityQueries>> getQueriesForEntities(
+      Snapshot snapshot, List<Map<String, dynamic>> hitEntities) async {
     isCrepeQueryLoading.value = true;
+
+    if (isPlaying.value) {
+      // Pause the video if it's playing (ideally we'll remove this check
+      // once we force users only being able to click on an entity iff
+      // the player is in snapshot mode with the video paused)
+      // but maybe this is a good guard regardless
+      togglePlayPause();
+    }
+
     try {
-      if (isPlaying.value) {
-        // Pause the video if it's playing (ideally we'll remove this check
-        // once we force users only being able to click on an entity iff
-        // the player is in snapshot mode with the video paused)
-        // but maybe this is a good guard regardless
-        togglePlayPause();
+      // Use the repo to generate queries
+      final resultsById =
+          await _snapshotRepo.getQueriesForEntities(snapshot, hitEntities);
+
+      // Get the queries from each element
+      final list =
+          resultsById.values.where((q) => q.allQueries.isNotEmpty).toList();
+
+      if (list.isEmpty) {
+        errorMessage.value = 'No queries generated.';
       }
 
-      final queries = await _snapshotRepo.getQueriesForEntity(snapshot, entity);
-
-      if (queries.allQueries.isEmpty) {
-        errorMessage.value = 'No queries were generated.';
-        return null;
-      }
-
-      return queries;
+      return list;
     } catch (e) {
       errorMessage.value = 'Failed to generate queries.';
-      return null;
+      return [];
     } finally {
       isCrepeQueryLoading.value = false;
     }

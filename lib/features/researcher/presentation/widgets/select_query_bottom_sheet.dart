@@ -10,14 +10,9 @@ import '../../../crepe/models/crepe_event_values.dart';
 /// Bottom sheet that displays all graph queries for a [Snapshot] entity
 /// and allows the user to select one of them
 class SelectQueryBottomSheet extends StatefulWidget {
-  final List<SnapshotQuery> allQueries;
-  final int bestQueryIndex;
+  final List<SnapshotEntityQueries> queryGroups;
 
-  const SelectQueryBottomSheet({
-    super.key,
-    required this.allQueries,
-    required this.bestQueryIndex,
-  });
+  const SelectQueryBottomSheet({super.key, required this.queryGroups});
 
   @override
   State<SelectQueryBottomSheet> createState() => _SelectQueryBottomSheetState();
@@ -31,19 +26,24 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
     super.initState();
 
     // Set the default query to best query (if generated) or the first query
-    SnapshotQuery defaultQuery;
-    if (widget.bestQueryIndex != -1 &&
-        widget.bestQueryIndex < widget.allQueries.length) {
-      defaultQuery = widget.allQueries[widget.bestQueryIndex];
-    } else {
-      defaultQuery = widget.allQueries[0];
+    if (widget.queryGroups.isNotEmpty) {
+      final firstGroup = widget.queryGroups.first;
+      if (firstGroup.bestQueryIndex != -1 &&
+          firstGroup.bestQueryIndex < firstGroup.allQueries.length) {
+        _selectedQueryString =
+            firstGroup.allQueries[firstGroup.bestQueryIndex].query;
+      } else if (firstGroup.allQueries.isNotEmpty) {
+        _selectedQueryString = firstGroup.allQueries.first.query;
+      }
     }
-    _selectedQueryString = defaultQuery.query;
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+        child: Container(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,27 +78,66 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
 
           const Divider(height: 1),
 
-          // Queries
+          // Queries, grouped by entity
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: widget.allQueries.length,
-              itemBuilder: (context, index) {
-                final SnapshotQuery q = widget.allQueries[index];
-                final String queryString = q.query;
-                final CrepeEventValues crepeEventValues = q.crepeEventValues;
+              itemCount: widget.queryGroups.length,
+              itemBuilder: (context, groupIndex) {
+                final group = widget.queryGroups[groupIndex];
 
-                final isBest = (index == widget.bestQueryIndex);
-                return _QueryCard(
-                  crepeEventValues: crepeEventValues,
-                  queryString: queryString,
-                  isBest: isBest,
-                  isSelected: _selectedQueryString == queryString,
-                  onSelected: () {
-                    setState(() {
-                      _selectedQueryString = queryString;
-                    });
-                  },
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Visual separator between entities
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (groupIndex > 0) const Divider(thickness: 2),
+                              Container(
+                                color: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text(
+                                  'Entity $groupIndex',
+                                  style: context.labelLarge,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Query cards for this entity
+                    ...group.allQueries.asMap().entries.map((entry) {
+                      final queryIndex = entry.key;
+                      final q = entry.value;
+
+                      // Check: Is this the best query?
+                      final isBestForThisGroup =
+                          (queryIndex == group.bestQueryIndex);
+
+                      // Check: Is this the currently selected query?
+                      final isSelected = (_selectedQueryString == q.query);
+
+                      return _QueryCard(
+                        crepeEventValues: q.crepeEventValues,
+                        queryString: q.query,
+                        isBest: isBestForThisGroup,
+                        isSelected: isSelected,
+                        onSelected: () {
+                          setState(() {
+                            _selectedQueryString = q.query;
+                          });
+                        },
+                      );
+                    })
+                  ],
                 );
               },
             ),
@@ -121,7 +160,7 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

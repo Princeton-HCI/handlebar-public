@@ -55,4 +55,15 @@ class SnapshotQuery {
         score: json['score'] as double,
         crepeEventValues: CrepeEventValues.fromJson(json['crepeEventValues']));
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SnapshotQuery &&
+          runtimeType == other.runtimeType &&
+          query == other.query &&
+          score == other.score;
+
+  @override
+  int get hashCode => Object.hash(query, score);
 }

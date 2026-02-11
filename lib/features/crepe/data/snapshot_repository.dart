@@ -84,16 +84,36 @@ class SnapshotRepository {
 
   /// Returns graph queries for a snapshot [entity] in the context of the given
   /// [snapshot]
-  Future<SnapshotEntityQueries> getQueriesForEntity(
+  Future<Map<int, SnapshotEntityQueries>> getQueriesForEntities(
     Snapshot snapshot,
-    Map<String, dynamic> entity,
+    List<Map<String, dynamic>> entities,
   ) async {
+    final String snapshotJson = jsonEncode(snapshot.toPluginJson());
+
+    // Extract just the IDs to send to the plugin
+    final List<int> entityIds =
+        entities.map((e) => e['entityId'] as int).toList();
+
+    if (entityIds.isEmpty) return {};
+
     try {
-      final String snapshotJson = jsonEncode(snapshot.toPluginJson());
-      final int targetEntityId = entity['entityId'] as int;
-      final rawQueries =
-          await _plugin.generateQueries(snapshotJson, targetEntityId);
-      return SnapshotEntityQueries.fromJson(rawQueries);
+      // Call plugin
+      final rawResults =
+          await _plugin.generateQueriesForVideo(snapshotJson, entityIds);
+
+      // Convert raw strings to domain object
+      final Map<int, SnapshotEntityQueries> domainResults = {};
+      for (var entry in rawResults.entries) {
+        final int entityId = int.parse(entry.key.toString());
+        final dynamic queryJson = entry.value;
+
+        if (queryJson is Map) {
+          domainResults[entityId] = SnapshotEntityQueries.fromJson(
+              Map<String, dynamic>.from(queryJson));
+        }
+      }
+
+      return domainResults;
     } catch (e) {
       _logger.severe('Failed to get queries from plugin: $e');
       rethrow;

@@ -377,7 +377,6 @@ The plugin uses Flutter's method channel for bidirectional communication:
 **App → Plugin** (Method Invocations):
 - `initializeGraphQuery`
 - `updateSnapshot`
-- `queryGraph`
 - `matchCollectorData`
 - `setContinuousMonitoring`
 

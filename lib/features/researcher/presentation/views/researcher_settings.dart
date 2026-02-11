@@ -198,42 +198,20 @@ class _VideoPlayerContainer extends StatelessWidget {
   }
 
   Future<void> _handleEntityTap(BuildContext context,
-      Map<String, dynamic> entity, Snapshot snapshot) async {
+      List<Map<String, dynamic>> hitEntities, Snapshot snapshot) async {
     final vm = context.read<VideoSessionViewModel>();
 
-    final SnapshotEntityQueries? queries =
-        await vm.getQueriesForEntity(snapshot, entity);
-
-    if (queries == null || !context.mounted) return;
+    final List<SnapshotEntityQueries> queryGroups =
+        await vm.getQueriesForEntities(snapshot, hitEntities);
+    if (queryGroups.isEmpty || !context.mounted) return;
 
     // Prompt the user for a query
-    final selectedQuery = await showModalBottomSheet<String>(
+    final String? selectedQuery = await showModalBottomSheet<String>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) {
-          final mediaQuery = MediaQuery.of(ctx);
-          final maxHeight = mediaQuery.size.height * 0.75;
+        builder: (ctx) => SelectQueryBottomSheet(queryGroups: queryGroups));
 
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: maxHeight,
-            ),
-            decoration: BoxDecoration(
-              color: context.colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: SelectQueryBottomSheet(
-              allQueries: queries.allQueries,
-              bestQueryIndex: queries.bestQueryIndex,
-            ),
-          );
-        });
-
-    if (selectedQuery == null) return;
-
-    if (!context.mounted) return;
+    if (selectedQuery == null || !context.mounted) return;
 
     // Prompt the user for a description of the graph query
     final description = await _showDescriptionDialog(context);
@@ -313,8 +291,8 @@ class _VideoPlayerContainer extends StatelessWidget {
                           videoSize: videoSize,
                           containerSize: containerSize,
                           originalDeviceSize: vm.deviceSize,
-                          onEntityTap: (entityIndex, entity) =>
-                              _handleEntityTap(context, entity, snapshot),
+                          onIntersectTap: (hitEntities) =>
+                              _handleEntityTap(context, hitEntities, snapshot),
                         );
                       },
                     ),
@@ -333,8 +311,9 @@ class _VideoPlayerContainer extends StatelessWidget {
                             final fields = allFieldsMap[index] ?? [];
 
                             // TODO: confirm if we need this first check
-                            if (index >= vm.snapshots.length)
+                            if (index >= vm.snapshots.length) {
                               return const SizedBox.shrink();
+                            }
                             if (fields.isEmpty) return const SizedBox.shrink();
 
                             return SnapshotFieldList(

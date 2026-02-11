@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:handlebar/features/crepe/models/snapshot.dart';
 
 typedef SnapshotEntityTapCallback = void Function(
-    int entityIndex, Map<String, dynamic> entity);
+    List<Map<String, dynamic>> hitEntities);
 
 class SnapshotOverlay extends StatelessWidget {
   final Snapshot snapshot;
   final Size videoSize;
   final Size containerSize;
   final Size originalDeviceSize;
-  final SnapshotEntityTapCallback? onEntityTap;
+  final SnapshotEntityTapCallback? onIntersectTap;
 
   const SnapshotOverlay({
     super.key,
@@ -17,7 +17,7 @@ class SnapshotOverlay extends StatelessWidget {
     required this.videoSize,
     required this.containerSize,
     required this.originalDeviceSize,
-    this.onEntityTap,
+    this.onIntersectTap,
   });
 
   @override
@@ -65,29 +65,28 @@ class SnapshotOverlay extends StatelessWidget {
       );
     }).toList();
 
-    return Stack(
-      children: [
-        // 1. Draw bounding boxes
-        CustomPaint(
-          painter: _BoundingBoxPainter(scaledBoxes),
-          size: containerSize,
-        ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        final tapPosition = details.localPosition;
 
-        // 2. Invisible tap targets over each box
-        ...snapshot.nodeEntities.asMap().entries.map((entry) {
-          final index = entry.key;
-          final entity = entry.value;
-          final box = scaledBoxes[index];
-          return Positioned.fromRect(
-            rect: box,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onEntityTap?.call(index, entity),
-              child: const SizedBox.expand(), // fills the rect
-            ),
-          );
-        }),
-      ],
+        // Find ALL boxes that contain the tap point
+        final List<Map<String, dynamic>> hits = [];
+        for (int i = 0; i < scaledBoxes.length; i++) {
+          if (scaledBoxes[i].contains(tapPosition)) {
+            hits.add(snapshot.nodeEntities[i]);
+          }
+        }
+
+        // Return the list (empty or populated)
+        onIntersectTap?.call(hits);
+      },
+      child: ClipRect(
+        child: CustomPaint(
+          size: containerSize,
+          painter: _BoundingBoxPainter(scaledBoxes),
+        ),
+      ),
     );
   }
 }
