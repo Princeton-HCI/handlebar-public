@@ -33,6 +33,7 @@ dependencies:
   crepe_plugin:
     path: ./crepe-flutter-plugin
   device_info_plus: ^10.1.0
+  downloadsfolder: ^1.2.0
   file_picker: ^10.0.0
   flutter:
     sdk: flutter

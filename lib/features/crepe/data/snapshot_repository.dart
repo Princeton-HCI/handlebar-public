@@ -20,6 +20,7 @@ class SnapshotRepository {
     final bytes = await zipFile.readAsBytes();
     List<Map<String, dynamic>> rawSnapshots = [];
     Size deviceSize = Size(0, 0);
+    int? videoStartTimestamp;
 
     try {
       final archive = ZipDecoder().decodeBytes(bytes);
@@ -34,6 +35,7 @@ class SnapshotRepository {
               (json['screenWidth'] as num).toDouble(),
               (json['screenHeight'] as num).toDouble(),
             );
+            videoStartTimestamp = json['videoStartTimestamp'] as int?;
           } catch (e) {
             _logger.warning('Failed to parse metadata file', e);
           }
@@ -71,7 +73,11 @@ class SnapshotRepository {
     // Sort and convert to Snapshot models
     rawSnapshots.sort((a, b) =>
         (a['captureTimestamp'] as int).compareTo(b['captureTimestamp'] as int));
-    final int startTime = rawSnapshots.first['captureTimestamp'];
+    // Use video start timestamp if available so snapshot videoTimestamps
+    // align with actual video positions. Fall back to first snapshot time
+    // for recordings that don't have this metadata.
+    final int startTime =
+        videoStartTimestamp ?? rawSnapshots.first['captureTimestamp'] as int;
     final List<Snapshot> snapshots = rawSnapshots
         .map((json) => Snapshot.fromJson(json: json, startTimestamp: startTime))
         .toList();

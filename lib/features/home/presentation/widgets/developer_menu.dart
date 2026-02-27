@@ -1,6 +1,5 @@
 import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 import 'package:handlebar/core/network/api_env_config.dart';
 
 import '../../../crepe/services/collector_service.dart';
@@ -286,22 +285,18 @@ class _SnapshotRecordingPanel extends StatelessWidget {
               children: [
                 // Recording mode display and button
                 SwitchListTile(
-                  title: const Text('Recording Mode'),
-                  subtitle: Text(isRecording
-                      ? 'Recording in progress...'
-                      : 'Start recording UI snapshots'),
-                  value: isRecording,
-                  onChanged: (value) async {
-                    if (value) {
-                      await recordingService.startRecording();
-                      await FlutterScreenRecording.startRecordScreen(
-                          "snapshot_recording");
-                    } else {
-                      await recordingService.stopRecording();
-                      await FlutterScreenRecording.stopRecordScreen;
-                    }
-                  },
-                ),
+                    title: const Text('Recording Mode'),
+                    subtitle: Text(isRecording
+                        ? 'Recording in progress...'
+                        : 'Start recording UI snapshots'),
+                    value: isRecording,
+                    onChanged: (value) async {
+                      if (value) {
+                        await recordingService.startRecording();
+                      } else {
+                        await recordingService.stopRecording();
+                      }
+                    }),
                 // Captured snapshots counter
                 StreamBuilder<int>(
                   stream: recordingService.snapshotCountStream,
