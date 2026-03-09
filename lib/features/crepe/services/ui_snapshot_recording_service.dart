@@ -34,11 +34,11 @@ class UiSnapshotRecordingService {
   bool _isCapturing = false;
   Timer? _snapshotRecordingTimer;
   final List<Map<String, dynamic>> _snapshots = [];
-  DateTime? _recordingStartTime;
-  DateTime? _recordingEndTime;
-  int? _videoStartTimestamp;
+  int? _recordingStartTime;
+  int? _recordingEndTime;
 
-  int get _captureIntervalSeconds => _preferencesService.captureIntervalSeconds;
+  int get _captureIntervalMilliseconds =>
+      _preferencesService.captureIntervalMilliseconds;
   int get _maxSnapshots => _preferencesService.maxSnapshots;
 
   final _recordingStateController = StreamController<bool>.broadcast();
@@ -65,8 +65,6 @@ class UiSnapshotRecordingService {
         return false;
       }
 
-      await _crepePlugin.initializeGraphQuery();
-
       // Start video recording (foreground)
       try {
         final started =
@@ -76,32 +74,32 @@ class UiSnapshotRecordingService {
           // Capture timestamp AFTER startRecordScreen returns, since the
           // video is now actively recording. This aligns snapshot timestamps
           // with actual video positions.
-          _videoStartTimestamp = DateTime.now().millisecondsSinceEpoch;
-          _logger.info("Screen recording started at $_videoStartTimestamp");
+          final now = DateTime.now().millisecondsSinceEpoch;
+          _recordingStartTime = now;
+          _logger.info("Screen recording started at $_recordingStartTime");
         } else {
           _logger.warning("Screen recording failed to start");
-          _videoStartTimestamp = null;
+          _recordingStartTime = null;
         }
       } catch (videoError) {
         _logger.severe("Error starting screen recording: $videoError");
-        _videoStartTimestamp = null;
+        _recordingStartTime = null;
         // We continue anyway, as snapshots might still be useful for debugging
       }
 
       // Start snapshot collection (background)
       _isRecording = true;
-      _recordingStartTime = DateTime.now();
+
       _snapshots.clear();
 
       _recordingStateController.add(_isRecording);
       _snapshotCountController.add(_snapshots.length);
 
+      await _crepePlugin.startRecording(
+          intervalMs: _captureIntervalMilliseconds);
+
       // Capture first snapshot immediately and then on interval
-      await _captureSnapshot();
-      _snapshotRecordingTimer = Timer.periodic(
-        Duration(seconds: _captureIntervalSeconds),
-        (_) => _captureSnapshot(),
-      );
+      _runSnapshotLoop();
 
       _notificationService.showSuccess('🔴 Recording started');
       return true;
@@ -114,18 +112,32 @@ class UiSnapshotRecordingService {
     }
   }
 
+  void _runSnapshotLoop() {
+    _captureSnapshot();
+
+    _snapshotRecordingTimer = Timer.periodic(
+      Duration(milliseconds: _captureIntervalMilliseconds),
+      (timer) {
+        if (!_isRecording) {
+          timer.cancel();
+          return;
+        }
+        _captureSnapshot();
+      },
+    );
+  }
+
   Future<void> stopRecording() async {
-    if (!_isRecording) {
-      _logger.warning('No recording in progress');
-      return;
-    }
+    _isRecording = false;
+
+    await _crepePlugin.stopRecording();
 
     // Stop all snapshot collection immediately
     _snapshotRecordingTimer?.cancel();
     _snapshotRecordingTimer = null;
-    _isRecording = false;
+
     _isCapturing = false;
-    _recordingEndTime = DateTime.now();
+    _recordingEndTime = DateTime.now().millisecondsSinceEpoch;
 
     // Stop video recording and get path
     String? rawVideoPath;
@@ -154,17 +166,16 @@ class UiSnapshotRecordingService {
   Future<void> _captureSnapshot() async {
     if (!_isRecording) return;
 
-    // Prevent overlapping captures. Without this, 
+    // Prevent overlapping captures. Without this,
     // we get stacked snapshots, this helps ensure they are evenly spaced
     if (_isCapturing) {
-      _logger.fine('Skipping snapshot capture — previous capture still in progress');
+      _logger.fine(
+          'Skipping snapshot capture — previous capture still in progress');
       return;
     }
     _isCapturing = true;
 
     try {
-      await _crepePlugin.updateSnapshot();
-
       final snapshotData = await _crepePlugin.getUiSnapshot();
 
       if (snapshotData.containsKey('error')) {
@@ -183,9 +194,12 @@ class UiSnapshotRecordingService {
 
       // Convert from Map<Object?, Object?> to Map<String, dynamic>
       final snapshot = Map<String, dynamic>.from(snapshotRaw as Map);
+      final metadata = snapshotRaw['metadata'];
 
-      // Add capture timestamp
-      snapshot['captureTimestamp'] = DateTime.now().millisecondsSinceEpoch;
+      // Use the time Java finished building it, NOT the time Dart received it
+      final int captureTimestamp =
+          metadata['timestamp'] ?? DateTime.now().millisecondsSinceEpoch;
+      snapshot['captureTimestamp'] = captureTimestamp;
 
       _snapshots.add(snapshot);
 
@@ -288,7 +302,6 @@ class UiSnapshotRecordingService {
     _snapshots.clear();
     _recordingStartTime = null;
     _recordingEndTime = null;
-    _videoStartTimestamp = null;
     _isCapturing = false;
     _snapshotCountController.add(_snapshots.length);
     _logger.info('Snapshots cleared');
@@ -331,12 +344,10 @@ class UiSnapshotRecordingService {
     }
 
     return {
-      'startTime': _recordingStartTime?.toIso8601String(),
-      'endTime': _recordingEndTime?.toIso8601String() ??
-          DateTime.now().toIso8601String(),
-      'videoStartTimestamp': _videoStartTimestamp,
+      'startTimestamp': _recordingStartTime,
+      'endTimestamp': _recordingEndTime,
       'snapshotCount': _snapshots.length,
-      'captureIntervalSeconds': _captureIntervalSeconds,
+      'captureIntervalMilliseconds': _captureIntervalMilliseconds,
       'maxSnapshots': _maxSnapshots,
       'appVersion': packageInfo.version,
       'buildNumber': packageInfo.buildNumber,

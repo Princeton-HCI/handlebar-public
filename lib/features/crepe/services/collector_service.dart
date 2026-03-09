@@ -30,9 +30,6 @@ class CollectorService {
   /// Initialize the collector service and fetch active collectors
   Future<bool> initialize() async {
     try {
-      // Initialize graph query system
-      await _crepePlugin.initializeGraphQuery();
-
       // Set up callback for continuous monitoring matches
       _crepePlugin.setCollectorMatchesCallback(_handleContinuousMatches);
 
@@ -120,7 +117,6 @@ class CollectorService {
       return result.fold(
         onSuccess: (response) async {
           _activeCollectors = ActiveCollectors(collectors: response);
-          await _crepePlugin.updateSnapshot();
           return true;
         },
         onFailure: (error) {
@@ -173,11 +169,7 @@ class CollectorService {
         return TestResult(false, "Failed to fetch collectors");
       }
 
-      // Step 3: ALWAYS update UI snapshot to capture current screen
-      log('📸 [CollectorService] Updating UI snapshot for current screen...');
-      await _crepePlugin.updateSnapshot();
-
-      // Step 5: Report results
+      // Step 4: Report results
       final collectorsCount = _activeCollectors?.collectors.length ?? 0;
 
       return TestResult(true, "Processed $collectorsCount collectors");

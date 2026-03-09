@@ -33,24 +33,24 @@ class RecordingPreferencesService {
     debugPrint('Debug mode set to: $enabled');
   }
 
-  int get captureIntervalSeconds {
+  int get captureIntervalMilliseconds {
     if (_prefs == null) {
       throw StateError('RecordingPreferencesService not initialized');
     }
-    return _prefs!.getInt(_captureIntervalKey) ?? 1;
+    return _prefs!.getInt(_captureIntervalKey) ?? 700;
   }
 
-  Future<void> setCaptureIntervalSeconds(int seconds) async {
-    if (seconds < 1 || seconds > 60) {
+  Future<void> setCaptureIntervalMilliseconds(int ms) async {
+    if (ms < 500 || ms > 60000) {
       debugPrint(
-          'Invalid capture interval: $seconds. Must be between 1 and 60 seconds.');
+          'Invalid capture interval: $ms. Must be between 500 and 60000 milliseconds.');
       return;
     }
     if (_prefs == null) {
       throw StateError('RecordingPreferencesService not initialized');
     }
-    await _prefs!.setInt(_captureIntervalKey, seconds);
-    debugPrint('Capture interval set to: $seconds seconds');
+    await _prefs!.setInt(_captureIntervalKey, ms);
+    debugPrint('Capture interval set to: $ms seconds');
   }
 
   int get maxSnapshots {
