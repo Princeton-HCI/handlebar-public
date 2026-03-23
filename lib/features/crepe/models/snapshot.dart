@@ -23,6 +23,11 @@ class Snapshot {
   /// Rectangular screen regions corresponding to NODE-type entities
   final List<Rect> boundingBoxes;
 
+  /// Z-index sequences for each node entity (parallel to [nodeEntities]).
+  /// Each sequence is a list of drawing-order values from root to leaf.
+  /// Null for entities from older recordings without z-index data.
+  final List<List<int>?> zIndexSequences;
+
   Snapshot({
     required this.originalTimestamp,
     required this.videoTimestamp,
@@ -31,6 +36,7 @@ class Snapshot {
     required this.nodeEntities,
     required this.triples,
     required this.boundingBoxes,
+    required this.zIndexSequences,
   });
 
   /// Builds a [Snapshot] from a JSON map exported by the Crepe plugin
@@ -47,18 +53,31 @@ class Snapshot {
 
     final List<Map<String, dynamic>> nodeEntitiesList = [];
     final List<Rect> boundingBoxesList = [];
+    final List<List<int>?> zIndexSequencesList = [];
     for (final entityMap in allEntities) {
       if (entityMap['type'] == 'NODE') {
         // Process bounding boxes only for NODE entities
         final nodeValue = entityMap['value'] as Map<String, dynamic>?;
         final boundsString = nodeValue?['boundsInScreen'] as String?;
 
-        if (boundsString != null) {
+        // Skip nodes that are not visible to the user (e.g. off-screen
+        // navigation drawer items). Default to true for older recordings
+        // that don't have this field.
+        final bool isVisible =
+            nodeValue?['isVisibleToUser'] as bool? ?? true;
+
+        if (boundsString != null && isVisible) {
           nodeEntitiesList.add(entityMap);
           final corners =
               boundsString.split(' ').map((c) => double.parse(c)).toList();
           boundingBoxesList.add(
               Rect.fromLTRB(corners[0], corners[1], corners[2], corners[3]));
+
+          // Parse z-index sequence (null for older recordings)
+          final rawZSeq = nodeValue?['nodeZIndexSequence'] as List<dynamic>?;
+          zIndexSequencesList.add(
+            rawZSeq?.map((e) => (e as num).toInt()).toList(),
+          );
         }
       }
     }
@@ -71,7 +90,8 @@ class Snapshot {
         allEntities: allEntities,
         nodeEntities: nodeEntitiesList,
         triples: triples,
-        boundingBoxes: boundingBoxesList);
+        boundingBoxes: boundingBoxesList,
+        zIndexSequences: zIndexSequencesList);
   }
 
   /// Converts the Snapshot back into a JSON-compatible map for the Crepe plugin

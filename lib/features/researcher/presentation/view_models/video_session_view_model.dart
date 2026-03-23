@@ -172,6 +172,7 @@ class VideoSessionViewModel extends ChangeNotifier {
           nodeEntities: [],
           triples: [],
           boundingBoxes: [],
+          zIndexSequences: [],
         );
       });
     } catch (e, st) {

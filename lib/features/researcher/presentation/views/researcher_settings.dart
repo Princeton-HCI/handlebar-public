@@ -284,6 +284,10 @@ class _VideoPlayerContainer extends StatelessWidget {
                     child: ValueListenableBuilder<int>(
                       valueListenable: vm.currSnapshotIndex,
                       builder: (context, index, _) {
+                        if (index >= vm.snapshots.length ||
+                            vm.snapshots.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
                         final snapshot = vm.snapshots[index];
 
                         return SnapshotOverlay(
@@ -579,6 +583,28 @@ class _VideoTimelineSliderState extends State<_VideoTimelineSlider>
               alignment: Alignment.center,
               children: [
                 timeline,
+                // Snapshot position markers
+                if (_vm.snapshots.isNotEmpty)
+                  IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _vm.timelineScrollController,
+                      builder: (context, _) {
+                        return CustomPaint(
+                          size: Size(viewportWidth, timelineHeight),
+                          painter: _SnapshotMarkerPainter(
+                            snapshots: _vm.snapshots,
+                            scrollOffset:
+                                _vm.timelineScrollController.hasClients
+                                    ? _vm.timelineScrollController.offset
+                                    : 0.0,
+                            viewportWidth: viewportWidth,
+                            pixelsPerSecond: pixelsPerSecond,
+                            timelineHeight: timelineHeight,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 // Playhead vertical line
                 Container(
                     width: 3, height: timelineHeight, color: Colors.redAccent),
@@ -634,6 +660,56 @@ class _TimelineScrollAnimator {
   void cancel() => _animationController.stop();
 
   void dispose() => _animationController.dispose();
+}
+
+/// Paints thin vertical lines on the timeline at each snapshot's position
+class _SnapshotMarkerPainter extends CustomPainter {
+  final List<Snapshot> snapshots;
+  final double scrollOffset;
+  final double viewportWidth;
+  final double pixelsPerSecond;
+  final double timelineHeight;
+
+  _SnapshotMarkerPainter({
+    required this.snapshots,
+    required this.scrollOffset,
+    required this.viewportWidth,
+    required this.pixelsPerSecond,
+    required this.timelineHeight,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withAlpha(180)
+      ..strokeWidth = 1.5;
+
+    final centerX = viewportWidth / 2;
+
+    for (final snapshot in snapshots) {
+      final snapshotTimeSecs =
+          snapshot.videoTimestamp.inMilliseconds / 1000.0;
+      final contentPx = snapshotTimeSecs * pixelsPerSecond;
+      // Position relative to viewport: content position minus scroll offset,
+      // shifted so that scroll offset 0 aligns with the center (the playhead)
+      final screenX = contentPx - scrollOffset + centerX;
+
+      // Only paint if visible
+      if (screenX >= 0 && screenX <= viewportWidth) {
+        canvas.drawLine(
+          Offset(screenX, 0),
+          Offset(screenX, timelineHeight),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SnapshotMarkerPainter oldDelegate) {
+    return oldDelegate.scrollOffset != scrollOffset ||
+        oldDelegate.snapshots != snapshots;
+  }
 }
 
 /// The widget for displaying a single thumbnail image in the timeline
