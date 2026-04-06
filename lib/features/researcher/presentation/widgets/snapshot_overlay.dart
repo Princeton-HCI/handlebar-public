@@ -4,12 +4,30 @@ import 'package:handlebar/features/crepe/models/snapshot.dart';
 typedef SnapshotEntityTapCallback = void Function(
     List<Map<String, dynamic>> hitEntities);
 
+class _OverlayEntry {
+  final int entityId;
+  final Map<String, dynamic> entity;
+  final Rect rect;
+  final List<int>? zIndex;
+  final bool isInteresting;
+
+  const _OverlayEntry({
+    required this.entityId,
+    required this.entity,
+    required this.rect,
+    required this.zIndex,
+    required this.isInteresting,
+  });
+}
+
 class SnapshotOverlay extends StatelessWidget {
   final Snapshot snapshot;
   final Size videoSize;
   final Size containerSize;
   final Size originalDeviceSize;
   final SnapshotEntityTapCallback? onIntersectTap;
+  final Map<String, List<int>>?
+      testResults; // From testing a collector against this snapshot
 
   const SnapshotOverlay({
     super.key,
@@ -18,6 +36,7 @@ class SnapshotOverlay extends StatelessWidget {
     required this.containerSize,
     required this.originalDeviceSize,
     this.onIntersectTap,
+    this.testResults,
   });
 
   /// adding a test for whether it's something we find 'interesting'
@@ -58,18 +77,17 @@ class SnapshotOverlay extends StatelessWidget {
 
   /// Computes a depth rank (0 = topmost) for each box based on z-index.
   /// Returns a list parallel to the input where each value is the rank.
-  static List<int> _computeDepthRanks(List<List<int>?> zIndexSequences) {
-    if (zIndexSequences.isEmpty) return [];
+  static Map<int, int> _computeDepthRanks(List<_OverlayEntry> entries) {
+    if (entries.isEmpty) return {};
 
-    // Create indexed list and sort by z-index descending (topmost first)
-    final indexed = List.generate(zIndexSequences.length, (i) => i);
-    indexed.sort((a, b) =>
-        _compareZIndex(zIndexSequences[b], zIndexSequences[a]));
+    // Sort entity ids by z-index descending (topmost first).
+    final sorted = List<_OverlayEntry>.from(entries);
+    sorted.sort((a, b) => _compareZIndex(b.zIndex, a.zIndex));
 
-    // Assign ranks
-    final ranks = List.filled(zIndexSequences.length, 0);
-    for (int rank = 0; rank < indexed.length; rank++) {
-      ranks[indexed[rank]] = rank;
+    // Assign ranks and return a map keyed by entity id instead of a parallel rank list.
+    final ranks = <int, int>{};
+    for (int rank = 0; rank < sorted.length; rank++) {
+      ranks[sorted[rank].entityId] = rank;
     }
     return ranks;
   }
@@ -101,7 +119,12 @@ class SnapshotOverlay extends StatelessWidget {
     final double offsetX2 = (containerSize.width - screenUsedSize.width) / 2;
     final double offsetY2 = (containerSize.height - screenUsedSize.height) / 2;
 
-    final scaledBoxes = snapshot.boundingBoxes.map((rect) {
+    final Map<int, Rect> scaledBoxesMap = {}; // entityId : Rect
+
+    for (final entry in snapshot.boundingBoxes.entries) {
+      final int entityId = entry.key;
+      final Rect rect = entry.value;
+
       // Original device coords -> video file coords
       final videoRect = Rect.fromLTRB(
         (rect.left * scale1) + offsetX1,
@@ -111,98 +134,178 @@ class SnapshotOverlay extends StatelessWidget {
       );
 
       // Video file coords -> this device's container's coords
-      return Rect.fromLTRB(
+      scaledBoxesMap[entityId] = Rect.fromLTRB(
         (videoRect.left * scale2) + offsetX2,
         (videoRect.top * scale2) + offsetY2,
         (videoRect.right * scale2) + offsetX2,
         (videoRect.bottom * scale2) + offsetY2,
       );
-    }).toList();
+    }
 
-    // Mark which nodes are interesting (interactive or content-bearing)
-    final isInteresting = snapshot.nodeEntities
-        .map((e) => _isInterestingEntity(e))
-        .toList();
+    // One derived UI list built from map-based snapshot data.
+    final List<_OverlayEntry> overlayEntries = [];
+    for (final entityId in snapshot.nodeEntities.keys) {
+      final entity = snapshot.nodeEntities[entityId];
+      final rect = scaledBoxesMap[entityId];
 
-    // Compute depth ranks for visual rendering
-    final depthRanks = _computeDepthRanks(snapshot.zIndexSequences);
+      if (entity == null || rect == null) continue;
+
+      overlayEntries.add(
+        _OverlayEntry(
+          entityId: entityId,
+          entity: entity,
+          rect: rect,
+          zIndex: snapshot.zIndexSequences[entityId],
+          isInteresting: _isInterestingEntity(entity),
+        ),
+      );
+    }
+
+    final depthRanksByEntityId = _computeDepthRanks(overlayEntries);
+
+    // Map the Test Mode matches to their scaled Rects for highlighting
+    final Map<String, List<Rect>> highlightsToDraw = {};
+    if (testResults != null) {
+      for (final entry in testResults!.entries) {
+        final String fieldId = entry.key;
+        final List<int> matchedEntityIds = entry.value;
+        final List<Rect> rectsForThisField = [];
+
+        for (final entityId in matchedEntityIds) {
+          if (scaledBoxesMap.containsKey(entityId)) {
+            rectsForThisField.add(scaledBoxesMap[entityId]!);
+          }
+        }
+        highlightsToDraw[fieldId] = rectsForThisField;
+      }
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) {
         final tapPosition = details.localPosition;
 
-        // Find ALL boxes that contain the tap point, with their indices
-        final List<(int, Map<String, dynamic>)> hits = [];
-        for (int i = 0; i < scaledBoxes.length; i++) {
-          if (scaledBoxes[i].contains(tapPosition)) {
-            hits.add((i, snapshot.nodeEntities[i]));
+        // Find ALL entries that contain the tap point
+        final hits = <_OverlayEntry>[];
+        for (final entry in overlayEntries) {
+          if (entry.rect.contains(tapPosition)) {
+            hits.add(entry);
           }
         }
 
-        // Sort by z-index descending (topmost first)
-        hits.sort((a, b) => _compareZIndex(
-            snapshot.zIndexSequences[b.$1],
-            snapshot.zIndexSequences[a.$1]));
+        // Sort hits by z-index descending (topmost first)
+        hits.sort((a, b) => _compareZIndex(b.zIndex, a.zIndex));
 
         // Filter to interesting entities only (skip containers).
         // Fall back to all hits if no interesting entities found.
-        final interestingHits =
-            hits.where((h) => _isInterestingEntity(h.$2)).toList();
+        final interestingHits = hits.where((h) => h.isInteresting).toList();
         final result = interestingHits.isNotEmpty ? interestingHits : hits;
 
-        onIntersectTap?.call(result.map((h) => h.$2).toList());
+        onIntersectTap?.call(result.map((h) => h.entity).toList());
       },
       child: ClipRect(
         child: CustomPaint(
           size: containerSize,
-          painter: _BoundingBoxPainter(scaledBoxes, depthRanks, isInteresting),
+          painter: _OverlayPainter(
+            entries: overlayEntries,
+            depthRanksByEntityId: depthRanksByEntityId,
+            highlights: highlightsToDraw,
+          ),
         ),
       ),
     );
   }
 }
 
-class _BoundingBoxPainter extends CustomPainter {
-  final List<Rect> boxes;
-  final List<int> depthRanks;
-  final List<bool> isInteresting;
+class _OverlayPainter extends CustomPainter {
+  final List<_OverlayEntry> entries;
+  final Map<int, int> depthRanksByEntityId;
 
-  _BoundingBoxPainter(this.boxes, this.depthRanks, this.isInteresting);
+  // From highlight drawing
+  final Map<String, List<Rect>> highlights;
+
+  _OverlayPainter({
+    required this.entries,
+    required this.depthRanksByEntityId,
+    required this.highlights,
+  });
+
+  static const List<Color> _palette = [
+    Colors.blue,
+    Colors.orange,
+    Colors.green,
+    Colors.purple,
+    Colors.teal,
+    Colors.amber,
+    Colors.pink,
+    Colors.cyan,
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    // we use node 'interesting' rank to determine the opacity of the bounding box
+    _paintInterestingBoundingBoxes(canvas);
+    _paintHighlights(canvas);
+  }
+
+  void _paintInterestingBoundingBoxes(Canvas canvas) {
     int maxRank = 0;
-    for (int i = 0; i < boxes.length; i++) {
-      if (isInteresting.isNotEmpty && isInteresting[i] && depthRanks.isNotEmpty) {
-        if (depthRanks[i] > maxRank) maxRank = depthRanks[i];
+
+    // Compute max rank of interesting entries.
+    for (final entry in entries) {
+      if (entry.isInteresting) {
+        final rank = depthRanksByEntityId[entry.entityId] ?? 0;
+        if (rank > maxRank) maxRank = rank;
       }
     }
 
-    for (int i = 0; i < boxes.length; i++) {
-      // Only render interesting (interactive/content-bearing) nodes
-      if (isInteresting.isNotEmpty && !isInteresting[i]) continue;
+    // Only render interesting entities
+    for (final entry in entries) {
+      if (!entry.isInteresting) continue;
 
-      final rect = boxes[i];
-      final rank = depthRanks.isNotEmpty ? depthRanks[i] : 0;
-
-      // Stroke opacity: topmost ~0.80, deeper → ~0.15
+      final rank = depthRanksByEntityId[entry.entityId] ?? 0;
       final double normalizedDepth = maxRank > 0 ? rank / maxRank : 0.0;
       final double strokeAlpha = 0.80 - (normalizedDepth * 0.65);
 
       final strokePaint = Paint()
-        ..color = Colors.red.withValues(alpha: strokeAlpha)
+        ..color = Colors.red.withValues(alpha: strokeAlpha.clamp(0.0, 1.0))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
-      canvas.drawRect(rect, strokePaint);
+
+      canvas.drawRect(entry.rect, strokePaint);
+    }
+  }
+
+  void _paintHighlights(Canvas canvas) {
+    if (highlights.isEmpty) return;
+
+    int colorIndex = 0;
+
+    for (final entry in highlights.entries) {
+      final rectsToHighlight = entry.value;
+      final highlightColor = _palette[colorIndex % _palette.length];
+
+      final fillPaint = Paint()
+        ..color = highlightColor.withValues(alpha: 50 / 255)
+        ..style = PaintingStyle.fill;
+
+      final borderPaint = Paint()
+        ..color = highlightColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0;
+
+      for (final rect in rectsToHighlight) {
+        canvas.drawRect(rect, fillPaint);
+        canvas.drawRect(rect, borderPaint);
+      }
+
+      colorIndex++;
     }
   }
 
   @override
-  bool shouldRepaint(covariant _BoundingBoxPainter oldDelegate) {
-    return !identical(oldDelegate.boxes, boxes) ||
-        !identical(oldDelegate.depthRanks, depthRanks) ||
-        !identical(oldDelegate.isInteresting, isInteresting);
+  bool shouldRepaint(covariant _OverlayPainter oldDelegate) {
+    return !identical(oldDelegate.entries, entries) ||
+        !identical(oldDelegate.depthRanksByEntityId, depthRanksByEntityId) ||
+        !identical(oldDelegate.highlights, highlights);
   }
 }

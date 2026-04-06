@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../crepe/data/snapshot_repository.dart';
+import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/data_field.dart';
 import '../../data/video_thumbnail_repository.dart';
 import '../../../crepe/models/snapshot.dart';
@@ -21,9 +22,9 @@ class VideoSessionViewModel extends ChangeNotifier {
   static final _logger = Logger('VideoSessionViewModel');
   final int groupId;
 
-  VideoSessionViewModel({
-    required this.groupId,
-  });
+  VideoSessionViewModel({required this.groupId}) {
+    currSnapshotIndex.addListener(_onSnapshotChanged);
+  }
 
   // ================
   // State variables
@@ -48,6 +49,10 @@ class VideoSessionViewModel extends ChangeNotifier {
   // ---- Public collector state ----
   final ValueNotifier<Map<int, List<DataField>>> dataFields = ValueNotifier({});
   final ValueNotifier<bool> isCrepeQueryLoading = ValueNotifier(false);
+  final ValueNotifier<List<Collector>> sessionCollectors = ValueNotifier([]);
+  final ValueNotifier<Collector?> activeTestCollector = ValueNotifier(null);
+  final ValueNotifier<Map<String, List<int>>?> testResults =
+      ValueNotifier(null);
 
   // ---- Public constants ----
   static const double intervalSeconds = 2;
@@ -86,6 +91,18 @@ class VideoSessionViewModel extends ChangeNotifier {
   // ================
   // Lifecycle methods
   // ================
+
+  void _onSnapshotChanged() {
+    final activeCollector = activeTestCollector.value;
+
+    if (activeCollector != null) {
+      // Continuous mode: Automatically re-test the new snapshot!
+      _executeTest(activeCollector, currSnapshotIndex.value);
+    } else {
+      // No active test, ensure highlights are cleared
+      testResults.value = null;
+    }
+  }
 
   @override
   void dispose() {
@@ -169,10 +186,10 @@ class VideoSessionViewModel extends ChangeNotifier {
           videoTimestamp: Duration(seconds: i),
           metadata: {},
           allEntities: [],
-          nodeEntities: [],
+          nodeEntities: {},
           triples: [],
-          boundingBoxes: [],
-          zIndexSequences: [],
+          boundingBoxes: {},
+          zIndexSequences: {},
         );
       });
     } catch (e, st) {
@@ -250,6 +267,10 @@ class VideoSessionViewModel extends ChangeNotifier {
     playhead.value = Duration.zero;
     errorMessage.value = null;
     isLoading.value = false;
+    sessionCollectors.value.clear();
+    currSnapshotIndex.removeListener(_onSnapshotChanged);
+    activeTestCollector.value = null;
+    testResults.value?.clear();
 
     // Reset all private internal state
     _owner = Owner.idle;
@@ -758,11 +779,42 @@ class VideoSessionViewModel extends ChangeNotifier {
 
     return res.fold(onSuccess: (newCollector) {
       removeDataFieldsForSnapshot(snapshotIndex);
+      sessionCollectors.value = [...sessionCollectors.value, newCollector];
       return true;
     }, onFailure: (ApiError e) {
       errorMessage.value = e.message;
       return false;
     });
+  }
+
+  /// Toggles test mode for a specific collector
+  void toggleTestMode(Collector collector) {
+    if (activeTestCollector.value?.collectorId == collector.collectorId) {
+      // If clicking the currently active one, turn testing OFF
+      activeTestCollector.value = null;
+      testResults.value = null;
+    } else {
+      // Turn testing ON for this collector
+      activeTestCollector.value = collector;
+      _executeTest(collector, currSnapshotIndex.value);
+    }
+  }
+
+  /// The private method that actually calls the plugin
+  Future<void> _executeTest(Collector collector, int targetIndex) async {
+    try {
+      final snapshot = snapshots[targetIndex];
+      final results = await _snapshotRepo.testCollector(snapshot, collector);
+
+      // Only update the UI if the user hasn't scrubbed to a NEW frame
+      // or cancelled the test while we were waiting for the Java plugin.
+      if (activeTestCollector.value?.collectorId == collector.collectorId &&
+          currSnapshotIndex.value == targetIndex) {
+        testResults.value = results;
+      }
+    } catch (e) {
+      errorMessage.value = 'Failed to execute test: $e';
+    }
   }
 
   // ==============

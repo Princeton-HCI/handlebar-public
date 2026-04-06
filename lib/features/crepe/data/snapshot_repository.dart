@@ -7,6 +7,7 @@ import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 
+import '../models/collector.dart';
 import '../models/snapshot.dart';
 
 /// Handles UI snapshot data operations
@@ -122,6 +123,43 @@ class SnapshotRepository {
       return domainResults;
     } catch (e) {
       _logger.severe('Failed to get queries from plugin: $e');
+      rethrow;
+    }
+  }
+
+  /// Tests a specific [Collector] against a single [Snapshot]
+  /// Returns a map of DataField IDs to a list of matched SugiliteEntity IDs.
+  Future<Map<String, List<int>>> testCollector(
+    Snapshot snapshot,
+    Collector collector,
+  ) async {
+    try {
+      // Serialize the snapshot
+      final String snapshotJson = jsonEncode(snapshot.toPluginJson());
+
+      // Serialize the collector
+      final String collectorJson = jsonEncode(collector.toPluginFormat());
+
+      // Call the plugin
+      _logger.info(
+          'Testing collector ${collector.description} against snapshot...');
+      final Map<String, dynamic> rawMatches =
+          await _plugin.testCollectorOnSnapshot(
+        snapshotJson: snapshotJson,
+        collectorJson: collectorJson,
+      );
+
+      // Safely cast to strong Dart types
+      final Map<String, List<int>> typedMatches = rawMatches.map((key, value) {
+        final List<int> entityIds = List<int>.from(value as List<dynamic>);
+        return MapEntry(key, entityIds);
+      });
+
+      _logger.info(
+          'Test complete. Found matches for ${typedMatches.length} data fields.');
+      return typedMatches;
+    } catch (e, st) {
+      _logger.severe('Failed to test collector on snapshot: $e', e, st);
       rethrow;
     }
   }

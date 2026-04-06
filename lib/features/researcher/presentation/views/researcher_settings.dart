@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/shared_services/notification_service.dart';
 import '../../../../app/design-system/spacing.dart';
+import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/data_field.dart';
 import '../../../crepe/models/snapshot_entity_queries.dart';
 import '../view_models/video_session_view_model.dart';
@@ -106,11 +107,22 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
                 ],
               ),
             ),
+            // Playback controls
             Spacing.vSpace16,
             SizedBox(
               width: context.scaled(Spacing.token352),
               child: _VideoPlaybackControls(),
-            )
+            ),
+
+            Spacing.vSpace16,
+            const Divider(),
+            Spacing.vSpace16,
+
+            // Session collectors
+            SizedBox(
+              width: context.scaled(Spacing.token352),
+              child: const _CreatedCollectorsList(),
+            ),
           ],
         );
       },
@@ -281,26 +293,38 @@ class _VideoPlayerContainer extends StatelessWidget {
                   SizedBox(
                     width: containerSize.width,
                     height: containerSize.height,
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: vm.currSnapshotIndex,
-                      builder: (context, index, _) {
-                        if (index >= vm.snapshots.length ||
-                            vm.snapshots.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
+                    child: ListenableBuilder(
+                      listenable: Listenable.merge([
+                        vm.currSnapshotIndex,
+                        vm.testResults,
+                        vm.activeTestCollector,
+                      ]),
+                      builder: (context, _) {
+                        // Extract the current values directly from the view model
+                        final index = vm.currSnapshotIndex.value;
                         final snapshot = vm.snapshots[index];
+
+                        final testResults = vm.testResults.value;
+                        // We are testing if we have an active test collector
+                        final isTesting = vm.activeTestCollector.value != null;
 
                         return SnapshotOverlay(
                           snapshot: snapshot,
                           videoSize: videoSize,
                           containerSize: containerSize,
                           originalDeviceSize: vm.deviceSize,
-                          onIntersectTap: (hitEntities) =>
-                              _handleEntityTap(context, hitEntities, snapshot),
+                          testResults: testResults,
+
+                          // Disable tapping if we are testing!
+                          onIntersectTap: isTesting
+                              ? null
+                              : (hitEntities) => _handleEntityTap(
+                                  context, hitEntities, snapshot),
                         );
                       },
                     ),
                   ),
+
                   Positioned(
                     bottom: 16,
                     left: 16,
@@ -687,8 +711,7 @@ class _SnapshotMarkerPainter extends CustomPainter {
     final centerX = viewportWidth / 2;
 
     for (final snapshot in snapshots) {
-      final snapshotTimeSecs =
-          snapshot.videoTimestamp.inMilliseconds / 1000.0;
+      final snapshotTimeSecs = snapshot.videoTimestamp.inMilliseconds / 1000.0;
       final contentPx = snapshotTimeSecs * pixelsPerSecond;
       // Position relative to viewport: content position minus scroll offset,
       // shifted so that scroll offset 0 aligns with the center (the playhead)
@@ -820,6 +843,64 @@ class _PlaybackButtons extends StatelessWidget {
                       ),
                     ],
             ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CreatedCollectorsList extends StatelessWidget {
+  const _CreatedCollectorsList();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.read<VideoSessionViewModel>();
+
+    return ValueListenableBuilder<List<Collector>>(
+      valueListenable: vm.sessionCollectors,
+      builder: (context, collectors, _) {
+        if (collectors.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(Spacing.token16),
+            child: Text("No collectors created yet. Tap the UI to create one."),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: Spacing.token16),
+              child: Text("Created Collectors",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+            Spacing.vSpace8,
+            // List out the collectors
+            ...collectors.map((collector) {
+              return ValueListenableBuilder<Collector?>(
+                valueListenable: vm.activeTestCollector,
+                builder: (context, activeCollector, _) {
+                  // Check if this specific row is the one currently being tested
+                  final isTestingThis =
+                      activeCollector?.collectorId == collector.collectorId;
+
+                  return ListTile(
+                    title: Text(collector.appName),
+                    subtitle: Text(
+                        "${collector.dataFields.length} Data Fields • ${collector.description}"),
+                    trailing: HandlebarButton(
+                      text: isTestingThis ? "Stop Testing" : "Test",
+                      variant: isTestingThis
+                          ? ButtonVariant.destructive
+                          : ButtonVariant.primary,
+                      onPressed: () => vm.toggleTestMode(collector),
+                      isLoading: false,
+                    ),
+                  );
+                },
+              );
+            }),
           ],
         );
       },

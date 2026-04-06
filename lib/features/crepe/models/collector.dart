@@ -29,13 +29,13 @@ class Collector {
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toPluginFormat() {
     return {
-      'collector_id': collectorId,
-      'app_name': appName,
-      'app_package': appPackage,
+      'collectorId': collectorId,
+      'appName': appName,
+      'appPackage': appPackage,
       'description': description,
-      'datafields': dataFields.map((field) => field.toJson()).toList(),
+      'datafields': dataFields.map((field) => field.toPluginFormat()).toList(),
     };
   }
 

@@ -27,6 +27,14 @@ class DataField {
     };
   }
 
+  Map<String, dynamic> toPluginFormat() {
+    return {
+      'datafieldId': dataFieldId?.toString(),
+      'graphQuery': graphQuery,
+      'name': name,
+    };
+  }
+
   @override
   String toString() {
     return 'DataField(dataFieldId: $dataFieldId, graphQuery: $graphQuery, name: $name)';

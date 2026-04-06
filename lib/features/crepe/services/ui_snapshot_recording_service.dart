@@ -95,8 +95,7 @@ class UiSnapshotRecordingService {
       _recordingStateController.add(_isRecording);
       _snapshotCountController.add(_snapshots.length);
 
-      await _crepePlugin.startRecording(
-          intervalMs: _captureIntervalMilliseconds);
+      await _crepePlugin.startRecording();
 
       // Capture first snapshot immediately and then on interval
       _runSnapshotLoop();

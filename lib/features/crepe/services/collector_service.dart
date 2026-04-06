@@ -149,42 +149,4 @@ class CollectorService {
 
     return success;
   }
-
-  /// Test active collectors functionality - for testing/debugging
-  Future<TestResult> testActiveCollectors() async {
-    try {
-      log('🧪 [CollectorService] Starting collector test...');
-
-      // Step 1: Initialize if not already done
-      if (!_isInitialized) {
-        final initSuccess = await initialize();
-        if (!initSuccess) {
-          return TestResult(false, "Failed to initialize");
-        }
-      }
-
-      // Step 2: Fetch fresh collectors
-      final fetchSuccess = await refreshCollectors();
-      if (!fetchSuccess) {
-        return TestResult(false, "Failed to fetch collectors");
-      }
-
-      // Step 4: Report results
-      final collectorsCount = _activeCollectors?.collectors.length ?? 0;
-
-      return TestResult(true, "Processed $collectorsCount collectors");
-    } catch (e) {
-      log('❌ [CollectorService] Test failed: $e');
-      _showErrorToUser('Collector test failed: $e');
-      return TestResult(false, "Test failed: $e");
-    }
-  }
-}
-
-/// Result class for test operations
-class TestResult {
-  final bool success;
-  final String message;
-
-  TestResult(this.success, this.message);
 }

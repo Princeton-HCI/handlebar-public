@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../crepe/services/collector_service.dart';
 import '../../../../core/shared_services/notification_service.dart';
 
 /// A widget that displays action buttons in the home screen
@@ -28,40 +27,6 @@ class HomeActionButtons extends StatelessWidget {
     } catch (e) {
       NotificationService()
           .showError('❌ Error checking accessibility service: $e');
-    }
-  }
-
-  Future<void> _testCollectors() async {
-    final collectorService = CollectorService();
-
-    // Show loading dialog
-    showDialog(
-      context: homeContext,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text('Testing collectors...'),
-            ],
-          ),
-        );
-      },
-    );
-
-    final result = await collectorService.testActiveCollectors();
-
-    // Hide loading dialog
-    if (homeContext.mounted) Navigator.of(homeContext).pop();
-
-    if (result.success) {
-      NotificationService()
-          .showSuccess('✅ Successfully tested collectors: ${result.message}');
-    } else {
-      NotificationService()
-          .showError('❌ Failed to test collectors: ${result.message}');
     }
   }
 
@@ -90,7 +55,7 @@ class HomeActionButtons extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PlatformElevatedButton(
-          onPressed: _testCollectors,
+          onPressed: () => {},
           child: const Text('Enable Monitoring'),
         ),
       ],
