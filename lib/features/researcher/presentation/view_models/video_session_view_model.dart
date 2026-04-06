@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:handlebar/app/app_locator.dart';
 import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
+import 'package:handlebar/features/researcher/data/live_test_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:video_player/video_player.dart';
 
@@ -51,8 +52,10 @@ class VideoSessionViewModel extends ChangeNotifier {
   final ValueNotifier<bool> isCrepeQueryLoading = ValueNotifier(false);
   final ValueNotifier<List<Collector>> sessionCollectors = ValueNotifier([]);
   final ValueNotifier<Collector?> activeTestCollector = ValueNotifier(null);
+  // TODO: Make this into a model?
   final ValueNotifier<Map<String, List<int>>?> testResults =
-      ValueNotifier(null);
+      ValueNotifier(null); // datafield ID : matched entity IDs
+  final ValueNotifier<bool> isLiveTesting = ValueNotifier(false);
 
   // ---- Public constants ----
   static const double intervalSeconds = 2;
@@ -81,6 +84,7 @@ class VideoSessionViewModel extends ChangeNotifier {
   // ---- Private repositories ----
   final SnapshotRepository _snapshotRepo = SnapshotRepository();
   VideoThumbnailRepository? _thumbnailRepo;
+  final LiveTestRepository _liveTestRepo = LiveTestRepository();
 
   // ---- Private thumbnail pre-fetching state  ----
   Timer? _prefetchThrottle;
@@ -271,6 +275,10 @@ class VideoSessionViewModel extends ChangeNotifier {
     currSnapshotIndex.removeListener(_onSnapshotChanged);
     activeTestCollector.value = null;
     testResults.value?.clear();
+    if (isLiveTesting.value) {
+      _liveTestRepo.stopLiveTestSession();
+    }
+    isLiveTesting.value = false;
 
     // Reset all private internal state
     _owner = Owner.idle;
@@ -788,7 +796,7 @@ class VideoSessionViewModel extends ChangeNotifier {
   }
 
   /// Toggles test mode for a specific collector
-  void toggleTestMode(Collector collector) {
+  void toggleRecordingTestMode(Collector collector) {
     if (activeTestCollector.value?.collectorId == collector.collectorId) {
       // If clicking the currently active one, turn testing OFF
       activeTestCollector.value = null;
@@ -814,6 +822,33 @@ class VideoSessionViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage.value = 'Failed to execute test: $e';
+    }
+  }
+
+  /// Toggles the live test on the physical device for all collectors in the session
+  Future<void> toggleLiveTest() async {
+    if (isLiveTesting.value) {
+      // Stop live test
+      try {
+        await _liveTestRepo.stopLiveTestSession();
+        isLiveTesting.value = false;
+      } catch (e) {
+        errorMessage.value = 'Could not stop live test: $e';
+      }
+    } else {
+      // Start live test
+      if (sessionCollectors.value.isEmpty) {
+        errorMessage.value = "No collectors created yet. Add one to test!";
+        return;
+      }
+
+      try {
+        // Pass the entire list of collectors defined during this video session
+        await _liveTestRepo.startLiveTestSession(sessionCollectors.value);
+        isLiveTesting.value = true;
+      } catch (e) {
+        errorMessage.value = 'Failed to start live test: $e';
+      }
     }
   }
 

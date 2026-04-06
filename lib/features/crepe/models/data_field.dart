@@ -19,14 +19,6 @@ class DataField {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'data_field_id': dataFieldId,
-      'graph_query': graphQuery,
-      'name': name,
-    };
-  }
-
   Map<String, dynamic> toPluginFormat() {
     return {
       'datafieldId': dataFieldId?.toString(),

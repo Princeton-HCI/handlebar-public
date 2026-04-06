@@ -64,16 +64,4 @@ class CollectorMatch {
       'matchedAt': matchedAt.toIso8601String(),
     };
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'data_field_id': dataFieldId,
-      'membership_id': membershipId,
-      'collectorId': collectorId,
-      'values': values.toJson(),
-      'matchedNodes': matchedNodes,
-      'dataFieldName': dataFieldName,
-      'matchedAt': matchedAt.toIso8601String(),
-    };
-  }
 }

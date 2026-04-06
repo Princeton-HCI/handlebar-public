@@ -31,12 +31,4 @@ class MatchResult {
       error: json['error']?.toString(),
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'matches': matches.map((m) => m.toJson()).toList(),
-      'processedAt': processedAt.toIso8601String(),
-      if (error != null) 'error': error,
-    };
-  }
 }

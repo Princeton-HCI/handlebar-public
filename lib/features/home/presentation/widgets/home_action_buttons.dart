@@ -4,6 +4,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/shared_services/notification_service.dart';
+import '../../../crepe/services/collector_service.dart';
 
 /// A widget that displays action buttons in the home screen
 class HomeActionButtons extends StatelessWidget {
@@ -55,7 +56,10 @@ class HomeActionButtons extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PlatformElevatedButton(
-          onPressed: () => {},
+          onPressed: () {
+            final collectorService = CollectorService();
+            collectorService.initialize();
+          },
           child: const Text('Enable Monitoring'),
         ),
       ],

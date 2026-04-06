@@ -95,7 +95,7 @@ class Snapshot {
   }
 
   /// Converts the Snapshot back into a JSON-compatible map for the Crepe plugin
-  Map<String, dynamic> toPluginJson() {
+  Map<String, dynamic> toPluginFormat() {
     return {
       'metadata': metadata,
       'entities': allEntities,

@@ -95,7 +95,7 @@ class SnapshotRepository {
     Snapshot snapshot,
     List<Map<String, dynamic>> entities,
   ) async {
-    final String snapshotJson = jsonEncode(snapshot.toPluginJson());
+    final String snapshotJson = jsonEncode(snapshot.toPluginFormat());
 
     // Extract just the IDs to send to the plugin
     final List<int> entityIds =
@@ -135,7 +135,7 @@ class SnapshotRepository {
   ) async {
     try {
       // Serialize the snapshot
-      final String snapshotJson = jsonEncode(snapshot.toPluginJson());
+      final String snapshotJson = jsonEncode(snapshot.toPluginFormat());
 
       // Serialize the collector
       final String collectorJson = jsonEncode(collector.toPluginFormat());

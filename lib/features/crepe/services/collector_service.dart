@@ -30,6 +30,11 @@ class CollectorService {
   /// Initialize the collector service and fetch active collectors
   Future<bool> initialize() async {
     try {
+      if (!await _crepePlugin.isAccessibilityServiceEnabled()) {
+        log('❌ [CollectorService] Accessibility Service not Enabled');
+        return false;
+      }
+
       // Set up callback for continuous monitoring matches
       _crepePlugin.setCollectorMatchesCallback(_handleContinuousMatches);
 

@@ -123,6 +123,13 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
               width: context.scaled(Spacing.token352),
               child: const _CreatedCollectorsList(),
             ),
+
+            Spacing.vSpace16,
+
+            SizedBox(
+              width: context.scaled(Spacing.token352),
+              child: const _LiveTestSessionControl(),
+            ),
           ],
         );
       },
@@ -894,7 +901,7 @@ class _CreatedCollectorsList extends StatelessWidget {
                       variant: isTestingThis
                           ? ButtonVariant.destructive
                           : ButtonVariant.primary,
-                      onPressed: () => vm.toggleTestMode(collector),
+                      onPressed: () => vm.toggleRecordingTestMode(collector),
                       isLoading: false,
                     ),
                   );
@@ -902,6 +909,86 @@ class _CreatedCollectorsList extends StatelessWidget {
               );
             }),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _LiveTestSessionControl extends StatelessWidget {
+  const _LiveTestSessionControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.read<VideoSessionViewModel>();
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: vm.isLiveTesting,
+      builder: (context, isLiveTesting, _) {
+        return Container(
+          margin: const EdgeInsets.all(Spacing.token16),
+          padding: const EdgeInsets.all(Spacing.token16),
+          decoration: BoxDecoration(
+            color: isLiveTesting
+                ? Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3)
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(Spacing.token16),
+            border: Border.all(
+              color: isLiveTesting
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.shade300,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isLiveTesting
+                        ? Icons.sensors_rounded
+                        : Icons.sensors_off_rounded,
+                    color: isLiveTesting
+                        ? context.colorScheme.primary
+                        : Colors.grey,
+                  ),
+                  Spacing.hSpace8,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Live System Test",
+                          style: context.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          isLiveTesting
+                              ? "Testing all session collectors live on device..."
+                              : "Test all session collectors against live apps.",
+                          style: context.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Spacing.vSpace16,
+              HandlebarButton(
+                text: isLiveTesting
+                    ? "Stop Live Session"
+                    : "Start Live Session Test",
+                variant: isLiveTesting
+                    ? ButtonVariant.destructive
+                    : ButtonVariant.primary,
+                onPressed: vm.toggleLiveTest,
+                isLoading: false,
+              ),
+            ],
+          ),
         );
       },
     );
