@@ -1,6 +1,6 @@
 import 'package:handlebar/features/research_group/presentation/views/research_group_dashboard.dart';
-import 'package:handlebar/features/researcher/presentation/view_models/video_session_view_model.dart';
-import 'package:handlebar/features/researcher/presentation/views/researcher_settings.dart';
+import 'package:handlebar/features/researcher/presentation/view_models/collector_creation_view_model.dart';
+import 'package:handlebar/features/researcher/presentation/views/create_collector_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -72,8 +72,8 @@ GoRouter navigationRouter() {
             final groupId = state.extra as int;
 
             return ChangeNotifierProvider(
-              create: (_) => VideoSessionViewModel(groupId: groupId),
-              child: const ResearcherSettings(),
+              create: (_) => CollectorCreationViewModel(groupId: groupId),
+              child: const CreateCollectorPage(),
             );
           }),
     ],

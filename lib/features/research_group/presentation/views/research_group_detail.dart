@@ -9,17 +9,20 @@ import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../models/research_group.dart';
 import '../../models/research_group_member.dart';
 import '../view_models/research_group_detail_view_model.dart';
 import '../widgets/bottom-sheets/member_detail_bottom_sheet.dart';
 import '../widgets/dialogs/add_researcher_dialog.dart';
 import '../widgets/dialogs/delete_collector_dialog.dart';
+import '../widgets/dialogs/edit_group_dialog.dart';
 import '../widgets/dialogs/kick_member_dialog.dart';
 import '../widgets/dialogs/my_membership_dialog.dart';
 import '../widgets/headers/research_group_info_header.dart';
 import '../widgets/cards/collector_card.dart';
 import '../widgets/cards/crepe_event_card.dart';
 import '../widgets/cards/member_card.dart';
+import '../widgets/sections/participant_recruitment_section.dart';
 
 /// Stateful container for a research group detailed view
 class ResearchGroupDetail extends StatefulWidget {
@@ -112,6 +115,20 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
     );
   }
 
+  void _showEditGroupDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => EditGroupDialog(vm: vm),
+    );
+  }
+
+  /// Count participants (non-researcher members) from the member list
+  int _getParticipantCount() {
+    return vm.members.value
+        .where((m) => !m.isResearcher && m.unenrolledAt == null)
+        .length;
+  }
+
   Widget _buildMyMembership() {
     return SliverToBoxAdapter(
       child: ValueListenableBuilder<ResearchGroupMember?>(
@@ -173,7 +190,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
           return const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(Spacing.token16),
-              child: Text("No collectors configured for this group yet."),
+              child: Text("You currently have no data collectors."),
             ),
           );
         }
@@ -227,93 +244,121 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
           return const SizedBox.shrink();
         });
 
-    return DynamicResponsiveScaffold(
-        appBar: HandlebarAppBar(
-            title: "Group Detail", onReturn: () => context.pop()),
-        child: Column(
-          children: [
-            Expanded(
-                child: ValueListenableBuilder(
-                    valueListenable: vm.isInitialized,
-                    builder: (_, isInit, __) {
-                      if (!isInit) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+    return ValueListenableBuilder<ResearchGroup>(
+        valueListenable: vm.group,
+        builder: (_, group, __) {
+          return DynamicResponsiveScaffold(
+              appBar: HandlebarAppBar(
+                  title: group.name, onReturn: () => context.pop()),
+              child: Column(
+                children: [
+                  Expanded(
+                      child: ValueListenableBuilder(
+                          valueListenable: vm.isInitialized,
+                          builder: (_, isInit, __) {
+                            if (!isInit) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
 
-                      return RefreshIndicator(
-                          onRefresh: vm.loadDetails,
-                          child: CustomScrollView(
-                              controller: _scrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              slivers: [
-                                // Group information
-                                SliverToBoxAdapter(
-                                    child: ResearchGroupInfoHeader(vm: vm)),
+                            return RefreshIndicator(
+                                onRefresh: vm.loadDetails,
+                                child: CustomScrollView(
+                                    controller: _scrollController,
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    slivers: [
+                                      // Study name + description
+                                      SliverToBoxAdapter(
+                                          child:
+                                              ResearchGroupInfoHeader(vm: vm)),
 
-                                // User's own membership
-                                const SliverSectionHeader(
-                                    title: "My Membership"),
-                                _buildMyMembership(),
+                                      // Participants section (researchers only)
+                                      if (vm.isResearcher) ...[
+                                        const SliverSectionHeader(
+                                            title: "Participants"),
+                                        SliverToBoxAdapter(
+                                          child: ParticipantRecruitmentSection(
+                                            joinCode: group.code,
+                                            participantCount:
+                                                _getParticipantCount(),
+                                            onEdit: () =>
+                                                _showEditGroupDialog(),
+                                          ),
+                                        ),
+                                      ],
 
-                                if (vm.isResearcher) ...[
-                                  // Membership list
-                                  SliverSectionHeader(
-                                    title: "Members",
-                                    actionLabel: "Add Researcher",
-                                    onAction: () => _showAddResearcherDialog(),
-                                  ),
-                                  _buildMembersList(),
-                                ],
+                                      // My Membership (participants only)
+                                      if (!vm.isResearcher) ...[
+                                        const SliverSectionHeader(
+                                            title: "My Membership"),
+                                        _buildMyMembership(),
+                                      ],
 
-                                // Group's active collectors
-                                SliverSectionHeader(
-                                  title: "Active Group Collectors",
-                                  actionLabel:
-                                      vm.isResearcher ? "Create" : null,
-                                  onAction: vm.isResearcher
-                                      ? () async {
-                                          await context.push(
-                                              '/define-collector',
-                                              extra: vm.group.value.id);
+                                      if (vm.isResearcher) ...[
+                                        // Researchers section
+                                        SliverSectionHeader(
+                                          title: "Researchers",
+                                          actionLabel: "Add Researcher",
+                                          onAction: () =>
+                                              _showAddResearcherDialog(),
+                                        ),
+                                        _buildMembersList(),
+                                      ],
 
-                                          if (context.mounted) {
-                                            NotificationService()
-                                                .setContext(context);
-                                            // Refresh dashboard after pop
-                                            vm.loadDetails();
-                                          }
-                                        }
-                                      : null,
-                                ),
-                                _buildCollectorsList(),
+                                      // Data Collectors
+                                      SliverSectionHeader(
+                                        title: "Data Collectors",
+                                        infoTooltip:
+                                            'Data Collectors are tools used in your study to collect screen content and gather data. You can view their status, and all collectors created for this specific study here.',
+                                        actionLabel:
+                                            vm.isResearcher ? "Create" : null,
+                                        onAction: vm.isResearcher
+                                            ? () async {
+                                                await context.push(
+                                                    '/define-collector',
+                                                    extra: vm.group.value.id);
 
-                                // Group's recent participant Crepe events
-                                const SliverSectionHeader(
-                                    title: "Recent Participant Events"),
-                                _buildEventFeed(),
+                                                if (context.mounted) {
+                                                  NotificationService()
+                                                      .setContext(context);
+                                                  vm.loadDetails();
+                                                }
+                                              }
+                                            : null,
+                                      ),
+                                      _buildCollectorsList(),
 
-                                // Loading indicator when fetching Crepe events
-                                // beyond first load
-                                SliverToBoxAdapter(
-                                  child: ValueListenableBuilder<bool>(
-                                      valueListenable: vm.isGroupEventsLoading,
-                                      builder: (_, isLoading, __) => isLoading
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(
-                                                  Spacing.token24),
-                                              child: SizedBox(
-                                                height: Spacing.token64,
-                                                child: Center(
-                                                    child:
-                                                        CircularProgressIndicator()),
-                                              ),
-                                            )
-                                          : Spacing.vSpace64),
-                                )
-                              ]));
-                    })),
-            errorListener
-          ],
-        ));
+                                      // Recent Participant Events
+                                      const SliverSectionHeader(
+                                          title: "Recent Participant Events"),
+                                      _buildEventFeed(),
+
+                                      // Loading indicator
+                                      SliverToBoxAdapter(
+                                        child: ValueListenableBuilder<bool>(
+                                            valueListenable:
+                                                vm.isGroupEventsLoading,
+                                            builder: (_, isLoading, __) =>
+                                                isLoading
+                                                    ? const Padding(
+                                                        padding: EdgeInsets.all(
+                                                            Spacing.token24),
+                                                        child: SizedBox(
+                                                          height:
+                                                              Spacing.token64,
+                                                          child: Center(
+                                                              child:
+                                                                  CircularProgressIndicator()),
+                                                        ),
+                                                      )
+                                                    : Spacing.vSpace64),
+                                      )
+                                    ]));
+                          })),
+                  errorListener
+                ],
+              ));
+        });
   }
 }

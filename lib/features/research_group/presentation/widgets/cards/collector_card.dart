@@ -12,12 +12,14 @@ class CollectorTile extends StatelessWidget {
   final String? groupName;
 
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const CollectorTile({
     super.key,
     required this.collector,
     this.groupName,
     this.onDelete,
+    this.onEdit,
   });
 
   factory CollectorTile.participant(ParticipantCollector item,
@@ -92,16 +94,27 @@ class CollectorTile extends StatelessWidget {
 
                   const SizedBox(height: 4),
 
-                  // Package name of collector
-                  Text(
-                    collector.appPackage,
-                    style: context.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontFamily: 'monospace',
+                  // Data field names summary
+                  if (collector.dataFields.isNotEmpty)
+                    Text(
+                      'Data Fields: ${collector.dataFields.map((f) => f.name).join(', ')}',
+                      style: context.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Text(
+                      collector.appPackage,
+                      style: context.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
 
                   // Conditional group name chip
                   if (groupName != null) ...[
@@ -145,8 +158,20 @@ class CollectorTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onEdit != null)
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined,
+                            size: 20, color: scheme.onSurface),
+                        Spacing.hSpace8,
+                        Text("Edit Collector",
+                            style: TextStyle(color: scheme.onSurface)),
+                      ],
+                    ),
+                  ),
                 if (onDelete != null)
-                  // Delete collector
                   PopupMenuItem(
                     value: 'delete',
                     child: Row(
@@ -154,13 +179,15 @@ class CollectorTile extends StatelessWidget {
                         Icon(Icons.delete_outline,
                             size: 20, color: scheme.error),
                         Spacing.hSpace8,
-                        Text("Remove", style: TextStyle(color: scheme.error)),
+                        Text("Delete Collector",
+                            style: TextStyle(color: scheme.error)),
                       ],
                     ),
                   ),
               ],
               onSelected: (value) {
                 if (value == 'details') _showCollectorDetails(context);
+                if (value == 'edit') onEdit?.call();
                 if (value == 'delete') onDelete?.call();
               },
             )

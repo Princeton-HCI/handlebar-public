@@ -10,8 +10,16 @@ class SliverSectionHeader extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
-  const SliverSectionHeader(
-      {super.key, required this.title, this.actionLabel, this.onAction});
+  /// Optional tooltip message shown via an (i) icon next to the title
+  final String? infoTooltip;
+
+  const SliverSectionHeader({
+    super.key,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+    this.infoTooltip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +30,27 @@ class SliverSectionHeader extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title,
-                    style: context.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title,
+                        style: context.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    if (infoTooltip != null) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: infoTooltip!,
+                        triggerMode: TooltipTriggerMode.tap,
+                        showDuration: const Duration(seconds: 4),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
                 if (onAction != null && actionLabel != null)
                   HandlebarButton(
                     text: actionLabel!,
