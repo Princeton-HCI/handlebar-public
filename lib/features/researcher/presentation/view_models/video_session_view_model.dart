@@ -82,7 +82,6 @@ class VideoSessionViewModel extends ChangeNotifier {
   Size deviceSize = Size(0, 0);
 
   // ---- Private repositories ----
-  final SnapshotRepository _snapshotRepo = SnapshotRepository();
   VideoThumbnailRepository? _thumbnailRepo;
   final LiveTestRepository _liveTestRepo = LiveTestRepository();
 
@@ -139,7 +138,7 @@ class VideoSessionViewModel extends ChangeNotifier {
       }
 
       final zipFile = File(zipResult.files.single.path!);
-      RecordingData data = await _snapshotRepo.loadSnapshotsFromZip(zipFile);
+      RecordingData data = await snapshotRepo.loadSnapshotsFromZip(zipFile);
       snapshots = data.snapshots;
       deviceSize = data.recordingDeviceSize;
 
@@ -692,7 +691,9 @@ class VideoSessionViewModel extends ChangeNotifier {
 
   /// Returns the graph queries for the [hitEntities] in the context of the [snapshot]
   Future<List<SnapshotEntityQueries>> getQueriesForEntities(
-      Snapshot snapshot, List<Map<String, dynamic>> hitEntities) async {
+      Snapshot snapshot,
+      List<Map<String, dynamic>> hitEntities,
+      String datafieldDescription) async {
     isCrepeQueryLoading.value = true;
 
     if (isPlaying.value) {
@@ -705,12 +706,12 @@ class VideoSessionViewModel extends ChangeNotifier {
 
     try {
       // Use the repo to generate queries
-      final resultsById =
-          await _snapshotRepo.getQueriesForEntities(snapshot, hitEntities);
+      final resultsById = await snapshotRepo.getQueriesForEntities(
+          snapshot, hitEntities, datafieldDescription, groupId);
 
       // Get the queries from each element
       final list =
-          resultsById.values.where((q) => q.allQueries.isNotEmpty).toList();
+          resultsById.values.where((q) => q.queries.isNotEmpty).toList();
 
       if (list.isEmpty) {
         errorMessage.value = 'No queries generated.';
@@ -812,7 +813,7 @@ class VideoSessionViewModel extends ChangeNotifier {
   Future<void> _executeTest(Collector collector, int targetIndex) async {
     try {
       final snapshot = snapshots[targetIndex];
-      final results = await _snapshotRepo.testCollector(snapshot, collector);
+      final results = await snapshotRepo.testCollector(snapshot, collector);
 
       // Only update the UI if the user hasn't scrubbed to a NEW frame
       // or cancelled the test while we were waiting for the Java plugin.

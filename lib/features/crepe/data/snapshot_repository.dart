@@ -7,12 +7,19 @@ import 'package:crepe_plugin/crepe_plugin.dart';
 import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/network/api_client.dart';
+import '../../../core/utils/result.dart';
 import '../models/collector.dart';
 import '../models/snapshot.dart';
 
+typedef LlmQuerySelectionResult = Result<Map<int, LlmQuerySelection>, ApiError>;
+
 /// Handles UI snapshot data operations
 class SnapshotRepository {
+  final ApiClient _api;
   static final Logger _logger = Logger('SnapshotRepository');
+
+  SnapshotRepository(this._api);
 
   final CrepePlugin _plugin = CrepePlugin();
 
@@ -92,9 +99,10 @@ class SnapshotRepository {
   /// Returns graph queries for a snapshot [entity] in the context of the given
   /// [snapshot]
   Future<Map<int, SnapshotEntityQueries>> getQueriesForEntities(
-    Snapshot snapshot,
-    List<Map<String, dynamic>> entities,
-  ) async {
+      Snapshot snapshot,
+      List<Map<String, dynamic>> entities,
+      String datafieldDescription,
+      int groupId) async {
     final String snapshotJson = jsonEncode(snapshot.toPluginFormat());
 
     // Extract just the IDs to send to the plugin
@@ -109,22 +117,207 @@ class SnapshotRepository {
           await _plugin.generateQueriesForVideo(snapshotJson, entityIds);
 
       // Convert raw strings to domain object
-      final Map<int, SnapshotEntityQueries> domainResults = {};
-      for (var entry in rawResults.entries) {
+      final Map<int, SnapshotEntityQueries> baseResults = {};
+      for (final entry in rawResults.entries) {
         final int entityId = int.parse(entry.key.toString());
         final dynamic queryJson = entry.value;
 
         if (queryJson is Map) {
-          domainResults[entityId] = SnapshotEntityQueries.fromJson(
-              Map<String, dynamic>.from(queryJson));
+          // For every entity, we map it to their queries
+          baseResults[entityId] = SnapshotEntityQueries.fromJson(
+            Map<String, dynamic>.from(queryJson),
+          );
         }
       }
 
-      return domainResults;
+      return await _tryEnrichBatchWithLlm(
+          baseResults: baseResults,
+          datafieldDescription: datafieldDescription,
+          groupId: groupId);
     } catch (e) {
       _logger.severe('Failed to get queries from plugin: $e');
       rethrow;
     }
+  }
+
+  Future<Map<int, SnapshotEntityQueries>> _tryEnrichBatchWithLlm({
+    required Map<int, SnapshotEntityQueries> baseResults,
+    required String datafieldDescription,
+    required int groupId,
+  }) async {
+    if (baseResults.isEmpty) {
+      return {};
+    }
+
+    // Skip entities with no query at all
+    final entitiesToEnrich = <int, SnapshotEntityQueries>{
+      for (final entry in baseResults.entries)
+        if (entry.value.queries.isNotEmpty) entry.key: entry.value,
+    };
+
+    if (entitiesToEnrich.isEmpty) {
+      return baseResults;
+    }
+
+    final res = await _selectAndDescribeQueriesBatchWithLlm(
+      userDescription: datafieldDescription,
+      entities: entitiesToEnrich,
+      groupId: groupId,
+    );
+
+    return res.fold(
+      onSuccess: (llmResults) => _mergeBatchWithLlmResults(
+        baseResults: baseResults,
+        llmResults: llmResults,
+      ),
+      onFailure: (e) {
+        _logger.warning(
+          'Batched LLM enrichment failed, using plugin results as fallback: ${e}',
+        );
+        return baseResults;
+      },
+    );
+  }
+
+  Future<LlmQuerySelectionResult> _selectAndDescribeQueriesBatchWithLlm(
+      {required String userDescription,
+      required Map<int, SnapshotEntityQueries> entities,
+      required int groupId}) async {
+    try {
+      final payload = {
+        'user_description': userDescription,
+        'entities': [
+          for (final entry in entities.entries)
+            {
+              'entity_id': entry.key,
+              'queries': [
+                for (final queryEntry in entry.value.queries.asMap().entries)
+                  {
+                    'index': queryEntry.key,
+                    'query': queryEntry.value.query,
+                  },
+              ],
+            },
+        ],
+      };
+
+      final response = await _api.post(
+        '/api/research/groups/$groupId/llm/query-selection',
+        body: payload,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseMap = jsonDecode(response.body) as Map<String, dynamic>;
+
+        final rawResults = Map<String, dynamic>.from(
+            responseMap['results'] as Map? ?? const {});
+
+        final parsed = <int, LlmQuerySelection>{};
+
+        for (final entry in rawResults.entries) {
+          final entityId = int.tryParse(entry.key);
+          if (entityId == null) continue;
+
+          final value = entry.value;
+          if (value is Map) {
+            parsed[entityId] = LlmQuerySelection.fromJson(
+              Map<String, dynamic>.from(value),
+            );
+          }
+        }
+
+        return Success(parsed);
+      }
+
+      if (ApiClient.isUnauthorized(response)) {
+        return ApiClient.unauthorizedFailure(
+          _logger,
+          action: 'selectAndDescribeQueriesBatchWithLlm',
+        );
+      }
+
+      return ApiClient.unhandledFailure(
+        _logger,
+        response,
+        action: 'selectAndDescribeQueriesBatchWithLlm',
+      );
+    } on ApiException catch (e) {
+      return ApiClient.connectionFailure(
+        _logger,
+        e,
+        action: 'selectAndDescribeQueriesBatchWithLlm',
+      );
+    } catch (e, st) {
+      return ApiClient.unexpectedFailure(
+        _logger,
+        e,
+        st,
+        action: 'selectAndDescribeQueriesBatchWithLlm',
+      );
+    }
+  }
+
+  // Merge backend descriptions + backend best index into plugin result
+  // for ALL entities' queries
+  Map<int, SnapshotEntityQueries> _mergeBatchWithLlmResults({
+    required Map<int, SnapshotEntityQueries> baseResults,
+    required Map<int, LlmQuerySelection> llmResults,
+  }) {
+    final merged = <int, SnapshotEntityQueries>{};
+
+    for (final entry in baseResults.entries) {
+      final entityId = entry.key;
+      final base = entry.value;
+      final llm = llmResults[entityId];
+
+      if (llm == null) {
+        merged[entityId] = base;
+        continue;
+      }
+
+      merged[entityId] = _mergeWithLlmResult(base, llm);
+    }
+
+    return merged;
+  }
+
+  // Merge backend descriptions + backend best index into plugin result for a
+  // SINGLE entity's queries
+  SnapshotEntityQueries _mergeWithLlmResult(
+    SnapshotEntityQueries base,
+    LlmQuerySelection llm,
+  ) {
+    final updatedQueries = base.queries.asMap().entries.map((entry) {
+      final index = entry.key;
+      final query = entry.value;
+
+      final llmDescription = llm.descriptions[index];
+
+      return query.copyWith(
+        // Replace description only if backend gave us one.
+        description:
+            (llmDescription != null && llmDescription.trim().isNotEmpty)
+                ? llmDescription
+                : query.description,
+      );
+    }).toList();
+
+    // Use backend best index only if valid, otherwise keep plugin heuristic
+    final safeBestIndex =
+        (llm.bestIndex >= 0 && llm.bestIndex < updatedQueries.length)
+            ? llm.bestIndex
+            : _safeBestIndex(base.bestQueryIndex, updatedQueries.length);
+
+    return SnapshotEntityQueries(
+      queries: updatedQueries,
+      bestQueryIndex: safeBestIndex,
+    );
+  }
+
+  int _safeBestIndex(int index, int queryCount) {
+    if (queryCount == 0) return -1;
+    if (index < 0 || index >= queryCount) return 0;
+    return index;
   }
 
   /// Tests a specific [Collector] against a single [Snapshot]

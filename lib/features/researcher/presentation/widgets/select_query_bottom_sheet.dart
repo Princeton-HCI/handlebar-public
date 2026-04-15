@@ -20,6 +20,7 @@ class SelectQueryBottomSheet extends StatefulWidget {
 
 class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
   late String _selectedQueryString;
+  bool _showDescription = true;
 
   @override
   void initState() {
@@ -29,11 +30,11 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
     if (widget.queryGroups.isNotEmpty) {
       final firstGroup = widget.queryGroups.first;
       if (firstGroup.bestQueryIndex != -1 &&
-          firstGroup.bestQueryIndex < firstGroup.allQueries.length) {
+          firstGroup.bestQueryIndex < firstGroup.queries.length) {
         _selectedQueryString =
-            firstGroup.allQueries[firstGroup.bestQueryIndex].query;
-      } else if (firstGroup.allQueries.isNotEmpty) {
-        _selectedQueryString = firstGroup.allQueries.first.query;
+            firstGroup.queries[firstGroup.bestQueryIndex].query;
+      } else if (firstGroup.queries.isNotEmpty) {
+        _selectedQueryString = firstGroup.queries.first.query;
       }
     }
   }
@@ -78,6 +79,30 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
 
           const Divider(height: 1),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.token16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  _showDescription
+                      ? 'Showing: Description'
+                      : 'Showing: Raw Query',
+                  style: context.bodySmall,
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: _showDescription,
+                  onChanged: (value) {
+                    setState(() {
+                      _showDescription = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
           // Queries, grouped by entity
           Flexible(
             child: ListView.builder(
@@ -114,7 +139,7 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
                     ),
 
                     // Query cards for this entity
-                    ...group.allQueries.asMap().entries.map((entry) {
+                    ...group.queries.asMap().entries.map((entry) {
                       final queryIndex = entry.key;
                       final q = entry.value;
 
@@ -128,6 +153,8 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
                       return _QueryCard(
                         crepeEventValues: q.crepeEventValues,
                         queryString: q.query,
+                        description: q.description,
+                        showDescription: _showDescription,
                         isBest: isBestForThisGroup,
                         isSelected: isSelected,
                         onSelected: () {
@@ -167,6 +194,8 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
 class _QueryCard extends StatelessWidget {
   final CrepeEventValues crepeEventValues;
   final String queryString;
+  final String description;
+  final bool showDescription;
   final bool isBest;
   final bool isSelected;
   final VoidCallback onSelected;
@@ -174,6 +203,8 @@ class _QueryCard extends StatelessWidget {
   const _QueryCard({
     required this.crepeEventValues,
     required this.queryString,
+    required this.description,
+    required this.showDescription,
     required this.isBest,
     required this.isSelected,
     required this.onSelected,
@@ -208,7 +239,7 @@ class _QueryCard extends StatelessWidget {
                         CrepeEventValuesList(values: crepeEventValues),
                         Spacing.vSpace8,
                         Text(
-                          'Query:',
+                          showDescription ? 'Description:' : 'Query:',
                           style: context.bodySmall,
                         ),
                         const SizedBox(height: 4),
@@ -216,11 +247,17 @@ class _QueryCard extends StatelessWidget {
                           padding: EdgeInsets.only(
                               left: Spacing.token8, right: Spacing.token32),
                           child: Text(
-                            queryString,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 8,
-                            ),
+                            showDescription
+                                ? (description.isNotEmpty
+                                    ? description
+                                    : 'No description available, check raw query')
+                                : queryString,
+                            style: showDescription
+                                ? context.bodyMedium
+                                : const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 8,
+                                  ),
                           ),
                         ),
                       ],

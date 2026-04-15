@@ -159,13 +159,37 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
             ],
           );
         });
+    return Stack(
+      children: [
+        StaticResponsiveScaffold(
+          appBar: HandlebarAppBar(
+            title: "Researcher Settings",
+            onReturn: () => context.pop(),
+          ),
+          child: Column(
+            children: [body, errorListener],
+          ),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: vm.isCrepeQueryLoading,
+          builder: (context, isCrepeQueryLoading, _) {
+            if (!isCrepeQueryLoading) return const SizedBox.shrink();
 
-    return StaticResponsiveScaffold(
-        appBar: HandlebarAppBar(
-            title: "Researcher Settings", onReturn: () => context.pop()),
-        child: Column(
-          children: [body, errorListener],
-        ));
+            return Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: Container(
+                  color: Colors.black.withAlpha(125),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -220,11 +244,18 @@ class _VideoPlayerContainer extends StatelessWidget {
       List<Map<String, dynamic>> hitEntities, Snapshot snapshot) async {
     final vm = context.read<VideoSessionViewModel>();
 
-    final List<SnapshotEntityQueries> queryGroups =
-        await vm.getQueriesForEntities(snapshot, hitEntities);
+    // Ask WHAT to capture (semantic intent)
+    final datafieldDescription = await _showDescriptionDialog(context);
+    if (datafieldDescription == null ||
+        datafieldDescription.isEmpty ||
+        !context.mounted) return;
+
+    final List<SnapshotEntityQueries> queryGroups = await vm
+        .getQueriesForEntities(snapshot, hitEntities, datafieldDescription);
+
     if (queryGroups.isEmpty || !context.mounted) return;
 
-    // Prompt the user for a query
+    // User selects query
     final String? selectedQuery = await showModalBottomSheet<String>(
         context: context,
         isScrollControlled: true,
@@ -232,10 +263,12 @@ class _VideoPlayerContainer extends StatelessWidget {
 
     if (selectedQuery == null || !context.mounted) return;
 
-    // Prompt the user for a description of the graph query
-    final description = await _showDescriptionDialog(context);
-    if (description == null || description.isEmpty) return; // User cancelled
-    vm.addDataField(snapshot, selectedQuery, description);
+    // Ask for field name (NEW)
+    final fieldName = await _showFieldNameDialog(context);
+    if (fieldName == null || fieldName.isEmpty || !context.mounted) return;
+
+    // Save
+    vm.addDataField(snapshot, selectedQuery, fieldName);
 
     /// Maybe here we take them to the setup collectors page?
     NotificationService().showSuccess(
@@ -247,11 +280,10 @@ class _VideoPlayerContainer extends StatelessWidget {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Description'),
+        title: const Text('Describe what you are trying to capture'),
         content: TextField(
           controller: descCtrl,
-          decoration: const InputDecoration(
-              labelText: 'Short description of what you are trying to capture'),
+          decoration: const InputDecoration(labelText: 'Description...'),
         ),
         actions: [
           TextButton(
@@ -260,7 +292,31 @@ class _VideoPlayerContainer extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(descCtrl.text.trim()),
-            child: const Text('Add'),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _showFieldNameDialog(BuildContext context) {
+    final TextEditingController descCtrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Name this Datafield'),
+        content: TextField(
+          controller: descCtrl,
+          decoration: const InputDecoration(labelText: 'Short name...'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(descCtrl.text.trim()),
+            child: const Text('Create'),
           ),
         ],
       ),
@@ -930,15 +986,12 @@ class _LiveTestSessionControl extends StatelessWidget {
           padding: const EdgeInsets.all(Spacing.token16),
           decoration: BoxDecoration(
             color: isLiveTesting
-                ? Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3)
-                : Theme.of(context).cardColor,
+                ? context.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                : context.theme.cardColor,
             borderRadius: BorderRadius.circular(Spacing.token16),
             border: Border.all(
               color: isLiveTesting
-                  ? Theme.of(context).colorScheme.primary
+                  ? context.theme.colorScheme.primary
                   : Colors.grey.shade300,
               width: 2,
             ),
