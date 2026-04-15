@@ -64,12 +64,21 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
     _nameCtrl = TextEditingController(text: initial?.name ?? autoFill ?? '');
     _descCtrl = TextEditingController();
     _selectedQuery = initial?.graphQuery;
-    _loadQueries();
+    _loading = false;
   }
 
   Future<void> _loadQueries() async {
-    final groups = await widget.session
-        .getQueriesForEntities(widget.snapshot, widget.hitEntities);
+    final description = _descCtrl.text.trim();
+    if (description.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _queryGroups = [];
+      _selectedQuery = widget.initial?.graphQuery;
+    });
+
+    final groups = await widget.session.getQueriesForEntities(
+        widget.snapshot, widget.hitEntities, description);
     if (!mounted) return;
     setState(() {
       _queryGroups = groups;
@@ -78,10 +87,10 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
       if (_selectedQuery == null && groups.isNotEmpty) {
         final first = groups.first;
         if (first.bestQueryIndex != -1 &&
-            first.bestQueryIndex < first.allQueries.length) {
-          _selectedQuery = first.allQueries[first.bestQueryIndex].query;
-        } else if (first.allQueries.isNotEmpty) {
-          _selectedQuery = first.allQueries.first.query;
+            first.bestQueryIndex < first.queries.length) {
+          _selectedQuery = first.queries[first.bestQueryIndex].query;
+        } else if (first.queries.isNotEmpty) {
+          _selectedQuery = first.queries.first.query;
         }
       }
     });
@@ -111,15 +120,15 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(Spacing.token16)),
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(Spacing.token16)),
         ),
         child: Column(
           children: [
             // Top action bar
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: Spacing.token8, vertical: Spacing.token8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.token8, vertical: Spacing.token8),
               child: Row(
                 children: [
                   IconButton(
@@ -171,13 +180,22 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
                   Spacing.vSpace16,
                   Text('Enter Description:', style: context.labelLarge),
                   const SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   TextField(
                     controller: _descCtrl,
                     minLines: 2,
                     maxLines: 4,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      hintText: 'Optional',
+                      hintText: 'Describe what data you want to capture',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _loadQueries,
+                      child: const Text('Generate Queries'),
                     ),
                   ),
                   Spacing.vSpace24,
@@ -212,8 +230,8 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
   List<Widget> _buildQueryCards() {
     final cards = <Widget>[];
     for (final group in _queryGroups) {
-      for (var i = 0; i < group.allQueries.length; i++) {
-        final q = group.allQueries[i];
+      for (var i = 0; i < group.queries.length; i++) {
+        final q = group.queries[i];
         final isBest = i == group.bestQueryIndex;
         final isSelected = _selectedQuery == q.query;
         cards.add(_QueryCard(
