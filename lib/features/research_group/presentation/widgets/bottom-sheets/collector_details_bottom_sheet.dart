@@ -82,7 +82,7 @@ class CollectorDetailsBottomSheet extends StatelessWidget {
             padding: const EdgeInsets.all(Spacing.token16),
             child: SizedBox(
               width: double.infinity,
-              child: HandlebarButton(
+              child: HandlebarOldButton(
                 text: 'Close',
                 variant: ButtonVariant.primary,
                 isLoading: false,

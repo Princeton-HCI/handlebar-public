@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:handlebar/features/home/presentation/view_models/participant_home_view_model.dart';
 
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../../core/shared_services/notification_service.dart';
 import '../../../../../core/utils/validators.dart';
 import '../../../models/research_group.dart';
-import '../../view_models/research_group_dashboard_view_model.dart';
 import '../cards/research_group_card.dart';
 
 /// Dialog for joining a research group
 class JoinGroupDialog extends StatefulWidget {
-  final ResearchGroupDashboardViewModel vm;
+  final ParticipantHomeViewModel vm;
 
   const JoinGroupDialog({super.key, required this.vm});
 

@@ -55,8 +55,8 @@ class SelectFrameStep extends StatelessWidget {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final videoSize = controller.value.size;
-                          final containerSize = Size(
-                              constraints.maxWidth, constraints.maxHeight);
+                          final containerSize =
+                              Size(constraints.maxWidth, constraints.maxHeight);
                           return Stack(
                             alignment: Alignment.center,
                             children: [
@@ -161,7 +161,7 @@ class SelectFrameStep extends StatelessWidget {
               // Select this frame
               SizedBox(
                 width: double.infinity,
-                child: HandlebarButton(
+                child: HandlebarOldButton(
                   text: 'Select This Frame',
                   variant: ButtonVariant.primary,
                   isLoading: false,

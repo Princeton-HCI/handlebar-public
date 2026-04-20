@@ -1,69 +1,93 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:crepe_plugin/crepe_plugin.dart';
+import 'package:handlebar/features/crepe/data/crepe_event_repository.dart';
 import 'package:handlebar/features/crepe/models/active_collectors.dart';
 import 'package:handlebar/features/crepe/models/collector_match.dart';
 import 'package:handlebar/features/crepe/models/match_result.dart';
 import 'package:handlebar/core/shared_services/notification_service.dart';
+import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 import '../../../app/app_locator.dart';
+import '../../../core/storage/auth_token_store.dart';
 import '../models/crepe_event.dart';
+import 'crepe_service.dart';
 
-// Service to manage active collectors from the backend
-// Handles fetching, parsing, and setting up collectors with the plugin
 class CollectorService {
-  // Singleton instance
   static final CollectorService _instance = CollectorService._internal();
   factory CollectorService() => _instance;
   CollectorService._internal();
 
-  final CrepePlugin _crepePlugin = CrepePlugin();
+  final CrepeService _crepeService = getIt<CrepeService>();
+  final AuthTokenStore _authStore = getIt<AuthTokenStore>();
 
-  // Store the current active collectors
   ActiveCollectors? _activeCollectors;
   bool _isInitialized = false;
 
-  /// Show error message to user via notification service
   static void _showErrorToUser(String message) {
     NotificationService().showError('CollectorService Error: $message');
   }
 
-  /// Initialize the collector service and fetch active collectors
-  Future<bool> initialize() async {
+  /// Based on compliance checks, activates collector monitoring.
+  /// Terms must have been accepted, accessibility services must have been enabled,
+  /// and the user must be a participant for monitoring to activate.
+  ///
+  /// Can be called any of the above changes on login, app startup, etc.
+  Future<bool> syncMonitoringState() async {
     try {
-      if (!await _crepePlugin.isAccessibilityServiceEnabled()) {
-        log('❌ [CollectorService] Accessibility Service not Enabled');
+      log('🔄 [CollectorService] Evaluating monitoring state...');
+
+      // 1. STATE CHECK: Are they a logged-in participant?
+      if (!_authStore.isAuthenticated || _authStore.userRole != 'participant') {
+        log('🛑 [CollectorService] User is not an active participant. Stopping.');
+        await _stopContinuousMonitoring();
         return false;
       }
 
-      // Set up callback for continuous monitoring matches
-      _crepePlugin.setCollectorMatchesCallback(_handleContinuousMatches);
+      // 2. STATE CHECK: Have they accepted the legal terms?
+      if (_authStore.needsTermsAcceptance) {
+        log('🛑 [CollectorService] Terms not accepted. Stopping.');
+        await _stopContinuousMonitoring();
+        return false;
+      }
 
-      // Fetch and set active collectors
+      // 3. STATE CHECK: Is Accessibility Enabled in the Android OS?
+      // Note: if it's not an Android OS we simply ignore this and exit the monitoring
+      if (!await _crepeService.isAccessibilityServiceEnabled()) {
+        log('🛑 [CollectorService] Accessibility OS permission disabled. Stopping.');
+        await _stopContinuousMonitoring();
+        return false;
+      }
+
+      // 4. Fetch data and start
+      _crepeService.setCollectorMatchesCallback(_handleContinuousMatches);
       final success = await fetchAndSetActiveCollectors();
 
       if (success) {
         _isInitialized = true;
-        // Enable continuous monitoring with the fetched collectors
         await _enableContinuousMonitoring();
       }
 
       return success;
     } catch (e) {
-      log('❌ [CollectorService] Error initializing: $e');
-      _showErrorToUser('Failed to initialize collector service: $e');
+      log('❌ [CollectorService] Error syncing state: $e');
+      await _stopContinuousMonitoring();
       return false;
     }
   }
 
-  // Enable continuous monitoring in the accessibility service
+  Future<void> _stopContinuousMonitoring() async {
+    _activeCollectors = null;
+    _isInitialized = false;
+    await _crepeService.setContinuousMonitoring(false);
+  }
+
   Future<void> _enableContinuousMonitoring() async {
     if (_activeCollectors != null) {
       try {
         final pluginData = _activeCollectors!.toPluginFormat();
         final collectorsJson = jsonEncode(pluginData);
-        await _crepePlugin.setContinuousMonitoring(true,
+        await _crepeService.setContinuousMonitoring(true,
             collectorsJson: collectorsJson);
-        log('🔄 [CollectorService] Continuous monitoring enabled');
+        log('🟢 [CollectorService] Continuous monitoring ENABLED');
       } catch (e) {
         log('❌ [CollectorService] Failed to enable continuous monitoring: $e');
         _showErrorToUser('Failed to enable continuous monitoring: $e');
@@ -71,25 +95,20 @@ class CollectorService {
     }
   }
 
-  // Handle matches found by continuous monitoring
   void _handleContinuousMatches(Map<String, dynamic> eventData) {
     try {
       final matchResult = MatchResult.fromJson(eventData);
       if (matchResult.hasMatches) {
         log('🎯 [CollectorService] Found ${matchResult.matches.length} continuous matches!');
-
-        // Send events for each match
         for (final match in matchResult.matches) {
           _sendCrepeEventForMatch(match);
         }
       }
     } catch (e) {
       log('❌ [CollectorService] Error handling continuous matches: $e');
-      _showErrorToUser('Error processing data matches: $e');
     }
   }
 
-  // Send a CrepeEvent for a specific match
   Future<void> _sendCrepeEventForMatch(CollectorMatch match) async {
     try {
       final crepeEvent = CrepeEvent(
@@ -99,59 +118,41 @@ class CollectorService {
         content: jsonEncode(match.toContentJson()),
       );
 
-      final result = await crepeRepo.send(crepeEvent);
+      final result = await getIt<CrepeEventRepository>().send(crepeEvent);
 
-      result.fold(onSuccess: (_) {
-        log('✅ [CollectorService] CrepeEvent sent: ${match.dataFieldId}');
-      }, onFailure: (error) {
-        log('❌ [CollectorService] Failed to send CrepeEvent: ${error.message}');
-      });
+      result.fold(
+        onSuccess: (_) =>
+            log('✅ [CollectorService] CrepeEvent sent: ${match.dataFieldId}'),
+        onFailure: (error) => log(
+            '❌ [CollectorService] Failed to send CrepeEvent: ${error.message}'),
+      );
     } catch (e) {
       log('❌ [CollectorService] Error sending CrepeEvent: $e');
-      _showErrorToUser('Failed to send data event: $e');
     }
   }
 
-  /// Fetch active collectors from backend and set them up with the plugin
   Future<bool> fetchAndSetActiveCollectors() async {
     try {
       log('📡 [CollectorService] Getting active collectors from backend...');
-
-      final result = await rgCollectorRepo.listParticipantCollectors();
+      final result = await getIt<ResearchGroupCollectorRepository>()
+          .listParticipantCollectors();
 
       return result.fold(
-        onSuccess: (response) async {
+        onSuccess: (response) {
           _activeCollectors = ActiveCollectors(collectors: response);
           return true;
         },
         onFailure: (error) {
           log('❌ [CollectorService] Failed to get collectors: ${error.message}');
-          _showErrorToUser('Failed to fetch collectors: ${error.message}');
           return false;
         },
       );
     } catch (e) {
       log('❌ [CollectorService] Error getting collectors: $e');
-      _showErrorToUser('Error fetching collectors: $e');
       return false;
     }
   }
 
-  /// Get the current active collectors response
   ActiveCollectors? get activeCollectors => _activeCollectors;
-
-  /// Check if the service is initialized
   bool get isInitialized => _isInitialized;
-
-  /// Manually trigger a refresh of collectors from the backend
-  Future<bool> refreshCollectors() async {
-    final success = await fetchAndSetActiveCollectors();
-
-    if (success) {
-      // Update continuous monitoring with new collectors
-      await _enableContinuousMonitoring();
-    }
-
-    return success;
-  }
 }

@@ -175,7 +175,7 @@ class _SelectQueryBottomSheetState extends State<SelectQueryBottomSheet> {
             padding: const EdgeInsets.all(Spacing.token16),
             child: SizedBox(
               width: double.infinity,
-              child: HandlebarButton(
+              child: HandlebarOldButton(
                 text: 'Select',
                 variant: ButtonVariant.primary,
                 isLoading: false,

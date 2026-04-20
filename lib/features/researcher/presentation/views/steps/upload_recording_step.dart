@@ -34,7 +34,7 @@ class UploadRecordingStep extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   Spacing.vSpace24,
-                  HandlebarButton(
+                  HandlebarOldButton(
                     text: 'Create a new recording',
                     variant: ButtonVariant.primary,
                     isLoading: false,
@@ -43,7 +43,7 @@ class UploadRecordingStep extends StatelessWidget {
                     onPressed: isLoading ? null : vm.startNewRecording,
                   ),
                   Spacing.vSpace16,
-                  HandlebarButton(
+                  HandlebarOldButton(
                     text: 'Upload existing recording',
                     variant: ButtonVariant.primary,
                     isLoading: isLoading,
@@ -55,8 +55,8 @@ class UploadRecordingStep extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(Spacing.token16),
                     decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.3),
+                      color:
+                          scheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: scheme.outlineVariant),
                     ),

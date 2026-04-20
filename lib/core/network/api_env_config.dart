@@ -14,6 +14,10 @@ class ApiEnvConfig {
   // For testing local backend ON PHYSICAL ANDROID DEVICE (with adb reverse)
   // static const String _staging = 'http://127.0.0.1:4000';
   // static const String _prod = 'http://127.0.0.1:4000';
+  //
+  // For testing the local backend ON FLUTTER WEB
+  // static const String _staging = 'http://localhost:4000';
+  // static const String _prod = 'http://localhost:4000';
 
   static bool _useProd = kDebugMode ? false : true;
 

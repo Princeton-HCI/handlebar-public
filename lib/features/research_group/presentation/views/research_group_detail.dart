@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../app/design-system/spacing.dart';
 import '../../../../core/shared_services/notification_service.dart';
-import '../../../../core/shared_widgets/handlebar_app_bar.dart';
+import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
@@ -244,12 +244,12 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
           return const SizedBox.shrink();
         });
 
-    return ValueListenableBuilder<ResearchGroup>(
+    return ValueListenableBuilder<ResearchGroup?>(
         valueListenable: vm.group,
         builder: (_, group, __) {
           return DynamicResponsiveScaffold(
-              appBar: HandlebarAppBar(
-                  title: group.name, onReturn: () => context.pop()),
+              appBar: HandlebarOldAppBar(
+                  title: group!.name, onReturn: () => context.pop()),
               child: Column(
                 children: [
                   Expanded(
@@ -315,13 +315,14 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
                                             vm.isResearcher ? "Create" : null,
                                         onAction: vm.isResearcher
                                             ? () async {
-                                                await context.push(
-                                                    '/define-collector',
-                                                    extra: vm.group.value.id);
+                                                final code = vm.studyCode;
 
-                                                if (context.mounted) {
-                                                  NotificationService()
-                                                      .setContext(context);
+                                                final didCreate =
+                                                    await context.push(
+                                                        '/studies/$code/define-collector');
+
+                                                if (didCreate == true &&
+                                                    context.mounted) {
                                                   vm.loadDetails();
                                                 }
                                               }

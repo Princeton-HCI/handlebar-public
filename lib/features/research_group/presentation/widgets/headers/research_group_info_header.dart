@@ -23,7 +23,7 @@ class ResearchGroupInfoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ResearchGroup>(
+    return ValueListenableBuilder<ResearchGroup?>(
         valueListenable: vm.group,
         builder: (context, group, _) {
           final scheme = context.colorScheme;
@@ -34,7 +34,7 @@ class ResearchGroupInfoHeader extends StatelessWidget {
               children: [
                 // Name
                 Text(
-                  group.name,
+                  group!.name,
                   style: context.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: scheme.onSurface,
@@ -58,7 +58,7 @@ class ResearchGroupInfoHeader extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      HandlebarButton(
+                      HandlebarOldButton(
                         text: "Delete Study",
                         variant: ButtonVariant.destructive,
                         isLoading: false,

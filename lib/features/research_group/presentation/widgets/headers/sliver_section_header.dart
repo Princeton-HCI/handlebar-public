@@ -52,7 +52,7 @@ class SliverSectionHeader extends StatelessWidget {
                   ],
                 ),
                 if (onAction != null && actionLabel != null)
-                  HandlebarButton(
+                  HandlebarOldButton(
                     text: actionLabel!,
                     onPressed: onAction,
                     variant: ButtonVariant.primary,

@@ -109,7 +109,7 @@ class ParticipantRecruitmentSection extends StatelessWidget {
           Row(
             children: [
               if (onEdit != null)
-                HandlebarButton(
+                HandlebarOldButton(
                   text: 'Edit',
                   variant: ButtonVariant.primary,
                   isLoading: false,

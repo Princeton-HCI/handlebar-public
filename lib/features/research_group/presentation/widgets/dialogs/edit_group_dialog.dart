@@ -26,8 +26,8 @@ class _EditGroupDialogState extends State<EditGroupDialog> {
   void initState() {
     super.initState();
     // Initialize with current values
-    _nameCtrl = TextEditingController(text: widget.vm.group.value.name);
-    _descCtrl = TextEditingController(text: widget.vm.group.value.description);
+    _nameCtrl = TextEditingController(text: widget.vm.group.value?.name);
+    _descCtrl = TextEditingController(text: widget.vm.group.value?.description);
   }
 
   @override

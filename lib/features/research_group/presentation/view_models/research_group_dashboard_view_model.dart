@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:handlebar/features/crepe/data/crepe_event_repository.dart';
 import 'package:handlebar/features/crepe/models/participant_collector.dart';
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
+import 'package:handlebar/features/research_group/data/research_group_membership_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_repository.dart';
 import 'package:logging/logging.dart';
 
-import '../../../../app/app_locator.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../crepe/models/crepe_event.dart';
 import '../../models/research_group.dart';
 
 class ResearchGroupDashboardViewModel extends ChangeNotifier {
   static final _logger = Logger('VideoSessionViewModel');
+
+  final ResearchGroupRepository _rgRepo;
+  final ResearchGroupCollectorRepository _rgCollectorRepo;
+  final ResearchGroupMembershipRepository _rgMembershipRepo;
+  final CrepeEventRepository _crepeEventRepository;
+
+  ResearchGroupDashboardViewModel(this._rgRepo, this._rgCollectorRepo,
+      this._rgMembershipRepo, this._crepeEventRepository);
 
   // ================
   // State variables
@@ -52,8 +61,8 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
 
     // Fetch research groups, participant collectors, and own Crepe events
     final results = await Future.wait([
-      groupRepo.listUserResearchGroups(),
-      rgCollectorRepo.listParticipantCollectors(),
+      _rgRepo.listUserResearchGroups(),
+      _rgCollectorRepo.listParticipantCollectors(),
       _loadEvents(clearList: true)
     ]);
 
@@ -96,7 +105,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
 
   /// Creates a research group
   Future<bool> createGroup(String name, String desc) async {
-    final res = await groupRepo.create(name: name, description: desc);
+    final res = await _rgRepo.create(name: name, description: desc);
     return res.fold(onSuccess: (group) {
       final updated = [...researcherGroups.value, group];
       updated.sort((a, b) => a.name.compareTo(b.name));
@@ -110,7 +119,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
 
   /// Looks up a research group
   Future<ResearchGroup?> lookupGroup(String code) async {
-    final res = await groupRepo.lookupByCode(code);
+    final res = await _rgRepo.lookupByCode(code);
 
     return res.fold(onSuccess: (group) {
       _lookupGroup = group;
@@ -123,7 +132,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
 
   /// Joins the user to a research group
   Future<bool> joinGroup(String code) async {
-    final res = await membershipRepo.joinByCode(code);
+    final res = await _rgMembershipRepo.joinByCode(code);
     return res.fold(onSuccess: (_) {
       if (_lookupGroup == null) {
         _logger.severe(
@@ -163,7 +172,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
       events.value = [];
     }
 
-    final res = await crepeRepo.listParticipantEvents(
+    final res = await _crepeEventRepository.listParticipantEvents(
         cursor: _nextEventCursor, limit: 30);
 
     res.fold(

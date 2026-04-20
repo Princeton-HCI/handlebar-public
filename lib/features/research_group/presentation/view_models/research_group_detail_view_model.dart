@@ -1,23 +1,38 @@
-import 'package:flutter/material.dart';
-import 'package:handlebar/app/app_locator.dart';
-import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../../../app/app_locator.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../crepe/data/crepe_event_repository.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../data/research_group_collector_repository.dart';
 import '../../data/research_group_membership_repository.dart';
+import '../../data/research_group_repository.dart';
 import '../../models/research_group.dart';
 import '../../models/research_group_member.dart';
 
-class ResearchGroupDetailViewModel extends ChangeNotifier {
-  final ValueNotifier<ResearchGroup> group;
+class ResearchGroupDetailViewModel {
+  final String studyCode;
 
-  ResearchGroupDetailViewModel({
-    required ResearchGroup initialGroup,
-  }) : group = ValueNotifier(initialGroup);
+  // Grab repos from getIt to clean up the constructor!
+  final _rgRepo = getIt<ResearchGroupRepository>();
+  final _rgCollectorRepo = getIt<ResearchGroupCollectorRepository>();
+  final _rgMembershipRepo = getIt<ResearchGroupMembershipRepository>();
+  final _crepeEventRepository = getIt<CrepeEventRepository>();
 
-  int get _groupId => group.value.id;
+  ResearchGroupDetailViewModel({required this.studyCode});
+
+  // Now nullable, starts as null while fetching
+  final ValueNotifier<ResearchGroup?> group = ValueNotifier(null);
+
+  int? get _groupId => group.value?.id;
+
+  bool get isResearcher {
+    if (myMembership.value != null) {
+      return myMembership.value!.isResearcher;
+    }
+    return group.value?.isResearcher ?? false; // Safe fallback
+  }
 
   // ================
   // State variables
@@ -30,12 +45,6 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
   // ---- Membership state ----
   final ValueNotifier<List<ResearchGroupMember>> members = ValueNotifier([]);
   final ValueNotifier<ResearchGroupMember?> myMembership = ValueNotifier(null);
-  bool get isResearcher {
-    if (myMembership.value != null) {
-      return myMembership.value!.isResearcher;
-    }
-    return group.value.isResearcher;
-  }
 
   // ---- Collector state ----
   final ValueNotifier<List<Collector>> collectors = ValueNotifier([]);
@@ -70,17 +79,36 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
     isInitialized.value = false;
     errorMessage.value = null;
 
-    // Fetch group collectors, own membership, and group's Crepe events
+    // 1. Fetch the group by code first
+    final groupResult = await _rgRepo.lookupByCode(studyCode);
+
+    ResearchGroup? fetchedGroup;
+    groupResult.fold(
+      onSuccess: (g) => fetchedGroup = g,
+      onFailure: (ApiError e) => errorMessage.value = e.message,
+    );
+
+    // If we failed to fetch the group (e.g. 404 Not Found), stop here.
+    if (fetchedGroup == null) {
+      isInitialized.value = true;
+      return;
+    }
+
+    // Set the group so _groupId is populated
+    group.value = fetchedGroup;
+    final int safeGroupId = fetchedGroup!.id;
+
+    // 2. Now fetch group collectors, own membership, and group's Crepe events
     final futures = <Future>[
-      rgCollectorRepo.listGroupCollectors(_groupId),
-      membershipRepo.getMyMembership(_groupId),
+      _rgCollectorRepo.listGroupCollectors(safeGroupId),
+      _rgMembershipRepo.getMyMembership(safeGroupId),
       _loadGroupEvents(clearList: true)
     ];
 
     // Fetch membership list if researcher
     Future<MembersResult>? memberFuture;
     if (isResearcher) {
-      memberFuture = membershipRepo.listResearchGroupMembers(_groupId);
+      memberFuture = _rgMembershipRepo.listResearchGroupMembers(safeGroupId);
       futures.add(memberFuture);
     }
 
@@ -114,9 +142,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Adds a researcher member to the research group
   Future<bool> addResearcher(String email) async {
-    if (!isResearcher) return false;
+    if (!isResearcher || _groupId == null) return false;
 
-    final res = await membershipRepo.addResearcherByEmail(_groupId, email);
+    final res = await _rgMembershipRepo.addResearcherByEmail(_groupId!, email);
 
     return res.fold(onSuccess: (newMember) {
       final currentList = List<ResearchGroupMember>.from(members.value);
@@ -126,8 +154,7 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
           .indexWhere((m) => m.membershipId == newMember.membershipId);
 
       if (index != -1) {
-        currentList[index] =
-            newMember; // Replace existing (promoting participant)
+        currentList[index] = newMember; // Replace existing
       } else {
         currentList.add(newMember); // Add new
       }
@@ -151,10 +178,10 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Updates the research group's name and description
   Future<bool> updateGroup({String? name, String? description}) async {
-    if (!isResearcher) return false;
+    if (!isResearcher || _groupId == null) return false;
 
     final res =
-        await groupRepo.update(_groupId, name: name, description: description);
+        await _rgRepo.update(_groupId!, name: name, description: description);
 
     return res.fold(onSuccess: (updatedGroup) {
       group.value = updatedGroup;
@@ -167,9 +194,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Deletes the research group and all related data
   Future<bool> deleteGroup() async {
-    if (!isResearcher) return false;
+    if (!isResearcher || _groupId == null) return false;
 
-    final res = await groupRepo.delete(_groupId);
+    final res = await _rgRepo.delete(_groupId!);
 
     return res.fold(
         onSuccess: (_) => true,
@@ -194,9 +221,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Kicks a member from the research group
   Future<bool> kickMember(int membershipId) async {
-    if (!isResearcher) return false;
+    if (!isResearcher || _groupId == null) return false;
 
-    final res = await membershipRepo.kick(_groupId, membershipId);
+    final res = await _rgMembershipRepo.kick(_groupId!, membershipId);
     return res.fold(onSuccess: (_) {
       final updatedList = members.value.map((m) {
         if (m.membershipId == membershipId) {
@@ -216,7 +243,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Updates the user's own membership details
   Future<bool> updateMyMembership({required String retentionPref}) async {
-    final res = await membershipRepo.updateMembership(
+    if (myMembership.value == null) return false;
+
+    final res = await _rgMembershipRepo.updateMembership(
       membershipId: myMembership.value!.membershipId,
       retentionPref: retentionPref,
     );
@@ -232,7 +261,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Removes the user from the research group
   Future<bool> leaveGroup() async {
-    final res = await membershipRepo.leave(myMembership.value!.membershipId);
+    if (myMembership.value == null) return false;
+
+    final res = await _rgMembershipRepo.leave(myMembership.value!.membershipId);
     return res.fold(
         onSuccess: (_) => true,
         onFailure: (ApiError e) {
@@ -247,9 +278,9 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
   /// Deletes a collector from the research group
   Future<bool> deleteCollector(int collectorId) async {
-    if (!isResearcher) return false;
+    if (!isResearcher || _groupId == null) return false;
 
-    final res = await rgCollectorRepo.removeCollector(_groupId, collectorId);
+    final res = await _rgCollectorRepo.removeCollector(_groupId!, collectorId);
     return res.fold(onSuccess: (_) {
       collectors.value =
           collectors.value.where((c) => c.collectorId != collectorId).toList();
@@ -278,6 +309,8 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadGroupEvents({required bool clearList}) async {
+    if (_groupId == null) return;
+
     isGroupEventsLoading.value = true;
     if (clearList) groupEvents.value = [];
 
@@ -285,11 +318,11 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
 
     if (isResearcher) {
       // Researcher: main feed = all group events
-      request = crepeRepo.listResearcherEventsForGroup(_groupId,
+      request = _crepeEventRepository.listResearcherEventsForGroup(_groupId!,
           cursor: _groupEventsCursor, limit: 30);
     } else {
       // Participant: main feed = my events
-      request = crepeRepo.listParticipantEvents(
+      request = _crepeEventRepository.listParticipantEvents(
           groupId: _groupId, cursor: _groupEventsCursor, limit: 30);
     }
 
@@ -326,6 +359,8 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadMemberEvents({required bool clearList}) async {
+    if (_groupId == null) return;
+
     isMemberDetailLoading.value = true;
 
     if (clearList) {
@@ -335,8 +370,8 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
     final requestedMemberId = _currentDetailMember?.membershipId;
     if (requestedMemberId == null) return;
 
-    final res = await crepeRepo.listResearcherEventsForParticipant(
-        groupId: _groupId,
+    final res = await _crepeEventRepository.listResearcherEventsForParticipant(
+        groupId: _groupId!,
         membershipId: requestedMemberId,
         cursor: _memberEventsCursor,
         limit: 15);
@@ -361,5 +396,23 @@ class ResearchGroupDetailViewModel extends ChangeNotifier {
         onFailure: (ApiError e) => errorMessage.value = e.message);
 
     isMemberDetailLoading.value = false;
+  }
+
+  // ================
+  // DISPOSE
+  // ================
+  void dispose() {
+    group.dispose();
+    isInitialized.dispose();
+    errorMessage.dispose();
+    members.dispose();
+    myMembership.dispose();
+    collectors.dispose();
+    groupEvents.dispose();
+    isGroupEventsLoading.dispose();
+    hasMoreGroupEvents.dispose();
+    memberDetailEvents.dispose();
+    isMemberDetailLoading.dispose();
+    hasMoreMemberEvents.dispose();
   }
 }

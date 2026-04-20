@@ -7,7 +7,7 @@ import '../effects/drop_shadow_container.dart';
 enum ButtonVariant { primary, destructive }
 
 /// A reusable button Widget with the Handlebar theme
-class HandlebarButton extends StatelessWidget {
+class HandlebarOldButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final ButtonVariant variant;
@@ -16,7 +16,7 @@ class HandlebarButton extends StatelessWidget {
   final String? loadingText;
   final Widget? prefixIcon;
 
-  const HandlebarButton(
+  const HandlebarOldButton(
       {super.key,
       required this.text,
       this.onPressed,

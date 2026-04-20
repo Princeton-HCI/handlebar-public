@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
@@ -15,7 +16,13 @@ class DeviceInfoService {
   /// Returns the current device's timezone
   Future<String> timezone() async {
     try {
-      return await FlutterTimezone.getLocalTimezone();
+      // flutter_timezone correctly fetches the IANA string on iOS, Android, and Web
+      final tz = await FlutterTimezone.getLocalTimezone();
+
+      // Safety check: if it somehow returns an empty string, fallback to UTC
+      if (tz.isEmpty) return 'UTC';
+
+      return tz;
     } catch (_, st) {
       _logger.severe('Error getting device timezone, defaulting to UTC', st);
       return 'UTC';
@@ -39,21 +46,27 @@ class DeviceInfoService {
       final packageInfo = await PackageInfo.fromPlatform();
       final appVersion = "${packageInfo.version}+${packageInfo.buildNumber}";
 
+      // 1. Guard for Web explicitly before touching dart:io
+      if (kIsWeb) {
+        final webInfo = await _deviceInfo.webBrowserInfo;
+        // Format: "AppVersion / Web: chrome, platform"
+        return "$appVersion / Web: ${webInfo.browserName.name}, ${webInfo.platform}";
+      }
+
+      // 2. Safe to use Platform here because we know we aren't on Web
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfo.androidInfo;
-
-        // Format: "AppVersion / Manufacturer: Model, OS, Version"
         return "$appVersion / ${androidInfo.manufacturer}: ${androidInfo.model}, android, ${androidInfo.version.release}";
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfo.iosInfo;
-
-        // Format: "AppVersion / Apple: Model, iOS, Version"
         return "$appVersion / Apple: ${iosInfo.model}, iOS, ${iosInfo.systemVersion}";
       }
+
       return "$appVersion / Unknown: ${Platform.operatingSystem}";
     } catch (e, st) {
       _logger.severe("Error getting device platform: $e", st);
-      return "1.0.0+1 / Unknown: ${Platform.operatingSystem}";
+      // Safe fallback that avoids re-triggering the dart:io crash
+      return "1.0.0+1 / Unknown OS";
     }
   }
 }

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/shared_services/notification_service.dart';
-import '../../../../core/shared_widgets/handlebar_app_bar.dart';
+import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../view_models/collector_creation_view_model.dart';
 import '../widgets/collector_stepper_breadcrumb.dart';
@@ -24,6 +24,10 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
   void initState() {
     super.initState();
     NotificationService().setContext(context);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CollectorCreationViewModel>().initialize();
+    });
   }
 
   Future<bool> _confirmDiscard(BuildContext context) async {
@@ -52,20 +56,38 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CollectorCreationViewModel>();
+    final vm = context.read<CollectorCreationViewModel>();
 
-    final errorListener = ValueListenableBuilder<String?>(
-      valueListenable: vm.session.errorMessage,
-      builder: (_, msg, __) {
-        if (msg != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            NotificationService().showError(msg);
-          });
+    return ValueListenableBuilder<bool>(
+      valueListenable: vm.isResolvingCode,
+      builder: (context, isResolving, _) {
+        // 2. Show a full-screen loader while we lookup the Study Code
+        if (isResolving) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        return const SizedBox.shrink();
+
+        // 3. Handle Lookup Failure
+        return ValueListenableBuilder<String?>(
+          valueListenable: vm.errorMessage,
+          builder: (context, error, _) {
+            if (error != null) {
+              return Scaffold(
+                appBar: AppBar(title: const Text("Error")),
+                body: Center(child: Text(error)),
+              );
+            }
+
+            // 4. Resolve Success: Show the Stepper
+            return _buildStepperUI(context, vm);
+          },
+        );
       },
     );
+  }
 
+  Widget _buildStepperUI(BuildContext context, CollectorCreationViewModel vm) {
     return PopScope(
       canPop: !vm.hasUnsavedProgress,
       onPopInvokedWithResult: (didPop, _) async {
@@ -76,7 +98,7 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
         }
       },
       child: DynamicResponsiveScaffold(
-        appBar: HandlebarAppBar(
+        appBar: HandlebarOldAppBar(
           title: 'Create a Data Collector',
           onReturn: () async {
             if (vm.hasUnsavedProgress) {
@@ -94,10 +116,7 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
                 return CollectorStepperBreadcrumb(
                   currentStep: step,
                   onStepTapped: (target) async {
-                    if (target < step && vm.hasUnsavedProgress) {
-                      final ok = await _confirmDiscard(context);
-                      if (!ok) return;
-                    }
+                    // Logic for jumping steps...
                     vm.goToStep(target);
                   },
                 );
@@ -121,7 +140,6 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
                 },
               ),
             ),
-            errorListener,
           ],
         ),
       ),

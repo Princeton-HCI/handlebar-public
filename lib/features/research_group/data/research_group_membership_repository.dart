@@ -7,7 +7,7 @@ import '../models/research_group_member.dart';
 
 typedef MemberResult = Result<ResearchGroupMember, ApiError>;
 typedef MembersResult = Result<List<ResearchGroupMember>, ApiError>;
-typedef BoolResult = Result<bool, ApiError>;
+typedef BoolResult = Result<bool, ApiError>; // TODO: Modularize primitives?
 
 class ResearchGroupMembershipRepository {
   final ApiClient _api;

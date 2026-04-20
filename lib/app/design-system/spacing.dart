@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 /// Design-system spacing units and helpers
 class Spacing {
   // ----- Spacing Tokens -----
+  static const token4 = 4.0;
   static const token8 = 8.0;
+  static const token12 = 12.0;
   static const token16 = 16.0;
   static const token24 = 24.0;
   static const token32 = 32.0;
@@ -21,9 +23,13 @@ class Spacing {
   static const token256 = 256.0;
   static const token288 = 288.0;
   static const token352 = 352.0;
+  static const token512 = 512.0;
+  static const token768 = 768.0;
 
   // ----- Vertical Spaces -----
+  static const vSpace4 = SizedBox(height: token4);
   static const vSpace8 = SizedBox(height: token8);
+  static const vSpace12 = SizedBox(height: token12);
   static const vSpace16 = SizedBox(height: token16);
   static const vSpace24 = SizedBox(height: token24);
   static const vSpace32 = SizedBox(height: token32);

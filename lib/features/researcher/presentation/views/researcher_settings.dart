@@ -15,7 +15,7 @@ import '../../../crepe/models/snapshot_entity_queries.dart';
 import '../view_models/video_session_view_model.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_button.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_icon_button.dart';
-import '../../../../core/shared_widgets/handlebar_app_bar.dart';
+import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_segment_group.dart';
 import '../../../../core/shared_widgets/scaffolds/static_responsive_scaffold.dart';
 import '../widgets/select_query_bottom_sheet.dart';
@@ -162,7 +162,7 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
     return Stack(
       children: [
         StaticResponsiveScaffold(
-          appBar: HandlebarAppBar(
+          appBar: HandlebarOldAppBar(
             title: "Researcher Settings",
             onReturn: () => context.pop(),
           ),
@@ -207,7 +207,7 @@ class _UploadPlaceholder extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            HandlebarButton(
+            HandlebarOldButton(
               text: "Upload Screen Recording",
               variant: ButtonVariant.primary,
               isLoading: false,
@@ -248,7 +248,9 @@ class _VideoPlayerContainer extends StatelessWidget {
     final datafieldDescription = await _showDescriptionDialog(context);
     if (datafieldDescription == null ||
         datafieldDescription.isEmpty ||
-        !context.mounted) return;
+        !context.mounted) {
+      return;
+    }
 
     final List<SnapshotEntityQueries> queryGroups = await vm
         .getQueriesForEntities(snapshot, hitEntities, datafieldDescription);
@@ -952,7 +954,7 @@ class _CreatedCollectorsList extends StatelessWidget {
                     title: Text(collector.appName),
                     subtitle: Text(
                         "${collector.dataFields.length} Data Fields • ${collector.description}"),
-                    trailing: HandlebarButton(
+                    trailing: HandlebarOldButton(
                       text: isTestingThis ? "Stop Testing" : "Test",
                       variant: isTestingThis
                           ? ButtonVariant.destructive
@@ -1030,7 +1032,7 @@ class _LiveTestSessionControl extends StatelessWidget {
                 ],
               ),
               Spacing.vSpace16,
-              HandlebarButton(
+              HandlebarOldButton(
                 text: isLiveTesting
                     ? "Stop Live Session"
                     : "Start Live Session Test",

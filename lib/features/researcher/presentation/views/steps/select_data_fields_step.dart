@@ -200,7 +200,7 @@ class SelectDataFieldsStep extends StatelessWidget {
                   final enabled = fields.isNotEmpty;
                   return SizedBox(
                     width: double.infinity,
-                    child: HandlebarButton(
+                    child: HandlebarOldButton(
                       text: 'Create Collector',
                       variant: ButtonVariant.primary,
                       isLoading: false,

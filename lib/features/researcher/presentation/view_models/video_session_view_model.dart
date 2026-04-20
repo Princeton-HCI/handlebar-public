@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:handlebar/app/app_locator.dart';
 import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
+import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 import 'package:handlebar/features/researcher/data/live_test_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:video_player/video_player.dart';
@@ -23,10 +23,17 @@ class VideoSessionViewModel extends ChangeNotifier {
   static final _logger = Logger('VideoSessionViewModel');
   final int groupId;
 
-  VideoSessionViewModel({required this.groupId}) {
+  final ResearchGroupCollectorRepository _rgCollectorRepo;
+  final SnapshotRepository _snapshotRepo;
+
+  VideoSessionViewModel({
+    required this.groupId,
+    required ResearchGroupCollectorRepository rgCollectorRepo,
+    required SnapshotRepository snapshotRepo,
+  })  : _rgCollectorRepo = rgCollectorRepo,
+        _snapshotRepo = snapshotRepo {
     currSnapshotIndex.addListener(_onSnapshotChanged);
   }
-
   // ================
   // State variables
   // ================
@@ -138,7 +145,7 @@ class VideoSessionViewModel extends ChangeNotifier {
       }
 
       final zipFile = File(zipResult.files.single.path!);
-      RecordingData data = await snapshotRepo.loadSnapshotsFromZip(zipFile);
+      RecordingData data = await _snapshotRepo.loadSnapshotsFromZip(zipFile);
       snapshots = data.snapshots;
       deviceSize = data.recordingDeviceSize;
 
@@ -706,7 +713,7 @@ class VideoSessionViewModel extends ChangeNotifier {
 
     try {
       // Use the repo to generate queries
-      final resultsById = await snapshotRepo.getQueriesForEntities(
+      final resultsById = await _snapshotRepo.getQueriesForEntities(
           snapshot, hitEntities, datafieldDescription, groupId);
 
       // Get the queries from each element
@@ -778,7 +785,7 @@ class VideoSessionViewModel extends ChangeNotifier {
       }
     }
 
-    final res = await rgCollectorRepo.createCollectorAndAttach(
+    final res = await _rgCollectorRepo.createCollectorAndAttach(
       groupId: groupId,
       appName: derivedAppName,
       appPackage: appPackage,
@@ -813,7 +820,7 @@ class VideoSessionViewModel extends ChangeNotifier {
   Future<void> _executeTest(Collector collector, int targetIndex) async {
     try {
       final snapshot = snapshots[targetIndex];
-      final results = await snapshotRepo.testCollector(snapshot, collector);
+      final results = await _snapshotRepo.testCollector(snapshot, collector);
 
       // Only update the UI if the user hasn't scrubbed to a NEW frame
       // or cancelled the test while we were waiting for the Java plugin.

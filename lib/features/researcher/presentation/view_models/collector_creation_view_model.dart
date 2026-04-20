@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:handlebar/app/app_locator.dart';
+import 'package:handlebar/features/crepe/data/snapshot_repository.dart';
+import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 
 import '../../../crepe/models/data_field.dart';
+import '../../../research_group/data/research_group_repository.dart';
 import 'video_session_view_model.dart';
 
 /// Stepper state for the collector creation flow.
@@ -10,20 +14,52 @@ import 'video_session_view_model.dart';
 ///   0 — Upload Recording
 ///   1 — Select Frame
 ///   2 — Select Data Fields
-class CollectorCreationViewModel extends ChangeNotifier {
-  final VideoSessionViewModel session;
+class CollectorCreationViewModel {
+  final String studyCode;
+  final _rgRepo = getIt<ResearchGroupRepository>();
 
-  CollectorCreationViewModel({required int groupId})
-      : session = VideoSessionViewModel(groupId: groupId);
+  // Use Late because we can't initialize it until we resolve the studyCode to an ID
+  late final VideoSessionViewModel session;
 
+  CollectorCreationViewModel({required this.studyCode});
+
+  // ---- Resolution State ----
+  final ValueNotifier<bool> isResolvingCode = ValueNotifier(true);
+  final ValueNotifier<String?> errorMessage = ValueNotifier(null);
+
+  // ---- Stepper State ----
   static const int totalSteps = 3;
-
   final ValueNotifier<int> currentStep = ValueNotifier(0);
 
   /// Flat list of fields the user has selected for the collector under
   /// construction. Fields may originate from different snapshots in the
   /// recording — they all roll up into one collector.
   final ValueNotifier<List<DataField>> selectedFields = ValueNotifier([]);
+
+  /// Resolves the study code to a group ID and initializes the session VM.
+  /// Call this from initState in your Screen.
+  Future<void> initialize() async {
+    isResolvingCode.value = true;
+    errorMessage.value = null;
+
+    final result = await _rgRepo.lookupByCode(studyCode);
+
+    result.fold(
+      onSuccess: (group) {
+        // Now that we have the real ID, we can spin up the session VM
+        session = VideoSessionViewModel(
+          groupId: group.id,
+          rgCollectorRepo: getIt<ResearchGroupCollectorRepository>(),
+          snapshotRepo: getIt<SnapshotRepository>(),
+        );
+        isResolvingCode.value = false;
+      },
+      onFailure: (error) {
+        errorMessage.value = error.message;
+        isResolvingCode.value = false;
+      },
+    );
+  }
 
   /// True if there is unsaved progress that should warn the user on exit.
   bool get hasUnsavedProgress {
@@ -83,11 +119,14 @@ class CollectorCreationViewModel extends ChangeNotifier {
     // then call session loader and advance the step.
   }
 
-  @override
   void dispose() {
+    isResolvingCode.dispose();
+    errorMessage.dispose();
     currentStep.dispose();
     selectedFields.dispose();
-    session.dispose();
-    super.dispose();
+    // Only dispose session if it was actually initialized
+    if (!isResolvingCode.value && errorMessage.value == null) {
+      session.dispose();
+    }
   }
 }

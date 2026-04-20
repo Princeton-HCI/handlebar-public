@@ -5,15 +5,19 @@ import 'package:handlebar/features/research_group/presentation/widgets/cards/cre
 import 'package:handlebar/features/research_group/presentation/widgets/cards/research_group_card.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../app/app_locator.dart';
 import '../../../../app/design-system/spacing.dart';
 import '../../../../core/shared_services/notification_service.dart';
-import '../../../../core/shared_widgets/handlebar_app_bar.dart';
+import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
+import '../../../crepe/data/crepe_event_repository.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../data/research_group_collector_repository.dart';
+import '../../data/research_group_membership_repository.dart';
+import '../../data/research_group_repository.dart';
 import '../../models/research_group.dart';
 import '../view_models/research_group_dashboard_view_model.dart';
 import '../widgets/dialogs/create_group_dialog.dart';
-import '../widgets/dialogs/join_group_dialog.dart';
 import '../widgets/cards/collector_card.dart';
 import '../widgets/headers/sliver_section_header.dart';
 
@@ -25,7 +29,12 @@ class ResearchGroupDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Provide VideoSessionViewModel to all children
     return ChangeNotifierProvider(
-        create: (_) => ResearchGroupDashboardViewModel(),
+        create: (_) => ResearchGroupDashboardViewModel(
+              getIt<ResearchGroupRepository>(),
+              getIt<ResearchGroupCollectorRepository>(),
+              getIt<ResearchGroupMembershipRepository>(),
+              getIt<CrepeEventRepository>(),
+            ),
         child: const _ResearchGroupDashboardContainer());
   }
 }
@@ -85,13 +94,6 @@ class _ResearchGroupDashboardContainerState
     showDialog(
       context: context,
       builder: (context) => CreateGroupDialog(vm: vm),
-    );
-  }
-
-  void _showJoinGroupDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => JoinGroupDialog(vm: vm),
     );
   }
 
@@ -194,7 +196,7 @@ class _ResearchGroupDashboardContainerState
         });
 
     return DynamicResponsiveScaffold(
-        appBar: HandlebarAppBar(
+        appBar: HandlebarOldAppBar(
             title: "Research Group Dashboard", onReturn: () => context.go('/')),
         child: Column(children: [
           Expanded(
@@ -222,7 +224,7 @@ class _ResearchGroupDashboardContainerState
                           SliverSectionHeader(
                               title: "My Participant Groups",
                               actionLabel: "Join",
-                              onAction: () => _showJoinGroupDialog()),
+                              onAction: () => {}),
                           _buildGroupsList(vm.participantGroups),
 
                           // All active participant collectors
