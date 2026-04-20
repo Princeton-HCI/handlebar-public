@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:handlebar/features/auth/data/auth_repository.dart';
 
+import '../../../../app/app_locator.dart';
+import '../../../../core/storage/auth_token_store.dart';
 import '../../data/terms_repository.dart';
 import '../../models/accepted_terms.dart';
 import '../../models/current_terms_response.dart';
@@ -48,7 +50,11 @@ class TermsViewModel {
 
   Future<bool> accept() async {
     final termsId = termsToDisplay?.id;
-    if (termsId == null) return false;
+    if (termsId == null) {
+      // TODO: THIS MUST BE FALSE. SWITCH WHEN TERMS ADDED TO DB
+      await getIt<AuthTokenStore>().markTermsAsAcceptedLocally();
+      return true;
+    }
 
     isAccepting.value = true;
     errorMessage.value = null;
@@ -56,7 +62,7 @@ class TermsViewModel {
     final result = await _termsRepo.acceptTerms(termsId);
 
     result.fold(
-      onSuccess: (_) {
+      onSuccess: (_) async {
         // Optimistically update local state so the UI reflects acceptance
         response.value = CurrentTermsResponse(
           currentTerms: response.value!.currentTerms,
@@ -68,6 +74,8 @@ class TermsViewModel {
           futureTerms: response.value!.futureTerms,
           futureAcceptedTerms: response.value!.futureAcceptedTerms,
         );
+
+        await getIt<AuthTokenStore>().markTermsAsAcceptedLocally();
       },
       onFailure: (error) {
         errorMessage.value = error.message;

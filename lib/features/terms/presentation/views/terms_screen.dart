@@ -9,7 +9,6 @@ import '../../../../core/shared_widgets/handlebar_button.dart';
 import '../../../../core/shared_widgets/handlebar_layout.dart';
 import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
-import '../../../../core/storage/auth_token_store.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/terms_repository.dart';
 import '../view_models/terms_view_model.dart';
@@ -173,11 +172,7 @@ class _TermsScreenState extends State<TermsScreen> {
                       onPressed: () async {
                         final success = await _viewModel.accept();
                         if (success && context.mounted) {
-                          // TODO: have the viewmodel interact with AuthTokenSTore, not the UI
-                          await getIt<AuthTokenStore>()
-                              .markTermsAsAcceptedLocally();
-
-                          if (context.mounted) context.go('/');
+                          context.go('/');
                         }
                       },
                     ),

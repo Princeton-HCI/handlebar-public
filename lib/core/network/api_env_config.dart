@@ -11,7 +11,7 @@ class ApiEnvConfig {
   // static const String _staging = 'http://10.0.2.2:4000';
   // static const String _prod = 'http://10.0.2.2:4000';
 
-  // For testing local backend ON PHYSICAL ANDROID DEVICE (with adb reverse)
+  // For testing local backend ON PHYSICAL ANDROID DEVICE (with adb reverse on port 4000)
   // static const String _staging = 'http://127.0.0.1:4000';
   // static const String _prod = 'http://127.0.0.1:4000';
   //
