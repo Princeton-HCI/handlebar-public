@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:logging/logging.dart';
 
 import '../../../app/app_locator.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/utils/result.dart';
 import '../../crepe/services/collector_service.dart';
 import '../models/auth_session.dart';
@@ -71,7 +72,12 @@ class AuthRepository with ApiExecutor {
             final token = ApiClient.extractAuthToken(res);
 
             if (token.isNotEmpty) {
-              await _tokens.saveAuthToken(token);
+              await getIt<AuthTokenStore>().saveAuthToken(
+                token: token,
+                hasAcceptedTerms:
+                    false, // Force the disk to record that they need terms!
+                role: 'participant',
+              );
             }
 
             // Save the user's data

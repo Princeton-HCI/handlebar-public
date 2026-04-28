@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
+import 'package:provider/provider.dart';
 
-import '../../../../app/app_locator.dart';
 import '../../../../app/design-system/spacing.dart';
 import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/handlebar_button.dart';
 import '../../../../core/shared_widgets/handlebar_layout.dart';
 import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
-import '../../../auth/data/auth_repository.dart';
-import '../../data/terms_repository.dart';
 import '../view_models/terms_view_model.dart';
 
 class TermsScreen extends StatefulWidget {
@@ -23,37 +21,28 @@ class TermsScreen extends StatefulWidget {
 }
 
 class _TermsScreenState extends State<TermsScreen> {
-  late final TermsViewModel _viewModel;
-
   @override
   void initState() {
     super.initState();
-    _viewModel =
-        TermsViewModel(getIt<AuthRepository>(), getIt<TermsRepository>());
-    _viewModel.loadTerms();
-  }
-
-  @override
-  void dispose() {
-    _viewModel.dispose();
-    super.dispose();
+    context.read<TermsViewModel>().loadTerms();
   }
 
   Future<void> _handleLogout() async {
-    await _viewModel.logout();
+    await context.read<TermsViewModel>().logout();
     if (mounted) context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.read<TermsViewModel>();
     final theme = context.theme;
 
     return ListenableBuilder(
       listenable: Listenable.merge([
-        _viewModel.isLoading,
-        _viewModel.errorMessage,
-        _viewModel.response,
-        _viewModel.isAccepting,
+        vm.isLoading,
+        vm.errorMessage,
+        vm.response,
+        vm.isAccepting,
       ]),
       builder: (context, _) {
         // Build the raw content first
@@ -81,21 +70,20 @@ class _TermsScreenState extends State<TermsScreen> {
     );
   }
 
-  // This just returns the Column, no Scaffold involved!
   Widget _buildBody(BuildContext context, ThemeData theme) {
-    if (_viewModel.isLoading.value) {
+    final vm = context.read<TermsViewModel>();
+    if (vm.isLoading.value) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_viewModel.errorMessage.value != null &&
-        _viewModel.termsToDisplay == null) {
+    if (vm.errorMessage.value != null && vm.termsToDisplay == null) {
       return Column(
         children: [
           Expanded(
             child: PassiveErrorView(
               message: "Could not load Handlebar's Terms and Conditions.",
-              subtitle: _viewModel.errorMessage.value,
-              onRetry: () => _viewModel.loadTerms(),
+              subtitle: vm.errorMessage.value,
+              onRetry: () => vm.loadTerms(),
             ),
           ),
           if (widget.isMandatory)
@@ -134,10 +122,10 @@ class _TermsScreenState extends State<TermsScreen> {
                       ),
                       Spacing.vSpace24,
                     ],
-                    if (_viewModel.termsToDisplay?.title != null &&
-                        _viewModel.termsToDisplay!.title.isNotEmpty) ...[
+                    if (vm.termsToDisplay?.title != null &&
+                        vm.termsToDisplay!.title.isNotEmpty) ...[
                       Text(
-                        _viewModel.termsToDisplay!.title,
+                        vm.termsToDisplay!.title,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -145,7 +133,7 @@ class _TermsScreenState extends State<TermsScreen> {
                       Spacing.vSpace16,
                     ],
                     Text(
-                      _viewModel.termsToDisplay?.text ?? "No terms available.",
+                      vm.termsToDisplay?.text ?? "No terms available.",
                       style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
                     ),
                     Spacing.vSpace8
@@ -168,9 +156,9 @@ class _TermsScreenState extends State<TermsScreen> {
                   children: [
                     HandlebarButton.primary(
                       label: 'Accept Terms',
-                      isLoading: _viewModel.isAccepting.value,
+                      isLoading: vm.isAccepting.value,
                       onPressed: () async {
-                        final success = await _viewModel.accept();
+                        final success = await vm.accept();
                         if (success && context.mounted) {
                           context.go('/');
                         }

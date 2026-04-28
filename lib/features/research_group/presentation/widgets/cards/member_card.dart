@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
 
 import '../../../../../app/design-system/spacing.dart';
-import '../../../models/research_group_member.dart';
+import '../../../../study/data/models/research_study_member.dart';
 
-/// Tile for displaying a [ResearchGroupMember] in the research group UI
+/// Tile for displaying a [ResearchStudyMember] in the research group UI
 class MemberTile extends StatelessWidget {
-  final ResearchGroupMember member;
+  final ResearchStudyMember member;
   final bool isResearcher;
   final VoidCallback onTap;
   final VoidCallback onKick;

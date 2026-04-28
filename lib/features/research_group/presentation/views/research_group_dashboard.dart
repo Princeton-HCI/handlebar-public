@@ -13,9 +13,8 @@ import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.da
 import '../../../crepe/data/crepe_event_repository.dart';
 import '../../../crepe/models/crepe_event.dart';
 import '../../data/research_group_collector_repository.dart';
-import '../../data/research_group_membership_repository.dart';
 import '../../data/research_group_repository.dart';
-import '../../models/research_group.dart';
+import '../../../study/data/models/research_study.dart';
 import '../view_models/research_group_dashboard_view_model.dart';
 import '../widgets/dialogs/create_group_dialog.dart';
 import '../widgets/cards/collector_card.dart';
@@ -29,10 +28,9 @@ class ResearchGroupDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Provide VideoSessionViewModel to all children
     return ChangeNotifierProvider(
-        create: (_) => ResearchGroupDashboardViewModel(
+        create: (_) => OldResearchGroupDashboardViewModel(
               getIt<ResearchGroupRepository>(),
               getIt<ResearchGroupCollectorRepository>(),
-              getIt<ResearchGroupMembershipRepository>(),
               getIt<CrepeEventRepository>(),
             ),
         child: const _ResearchGroupDashboardContainer());
@@ -50,14 +48,13 @@ class _ResearchGroupDashboardContainer extends StatefulWidget {
 class _ResearchGroupDashboardContainerState
     extends State<_ResearchGroupDashboardContainer> {
   late ScrollController _scrollController;
-  late ResearchGroupDashboardViewModel vm;
+  late OldResearchGroupDashboardViewModel vm;
 
   @override
   void initState() {
     super.initState();
-    NotificationService().setContext(context);
 
-    vm = context.read<ResearchGroupDashboardViewModel>();
+    vm = context.read<OldResearchGroupDashboardViewModel>();
 
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
@@ -97,8 +94,8 @@ class _ResearchGroupDashboardContainerState
     );
   }
 
-  Widget _buildGroupsList(ValueNotifier<List<ResearchGroup>> notifier) {
-    return ValueListenableBuilder<List<ResearchGroup>>(
+  Widget _buildGroupsList(ValueNotifier<List<ResearchStudy>> notifier) {
+    return ValueListenableBuilder<List<ResearchStudy>>(
       valueListenable: notifier,
       builder: (ctx1, groups, _) {
         if (groups.isEmpty) {
@@ -118,7 +115,6 @@ class _ResearchGroupDashboardContainerState
                     await context.push('/group-detail', extra: group);
 
                     if (mounted) {
-                      NotificationService().setContext(context);
                       vm.loadDashboard();
                     }
                   });

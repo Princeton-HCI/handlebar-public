@@ -1,17 +1,14 @@
-import 'package:flutter/foundation.dart'; // Added for kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
-import 'package:handlebar/features/auth/data/auth_repository.dart';
+import 'package:provider/provider.dart';
 
-import '../../../../app/app_locator.dart';
 import '../../../../app/design-system/spacing.dart';
 import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/handlebar_button.dart';
-import '../../../../core/shared_widgets/handlebar_layout.dart'; // Added for HandlebarMobileDrawer
+import '../../../../core/shared_widgets/handlebar_layout.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
-import '../../../../core/storage/auth_token_store.dart';
-import '../../services/crepe_service.dart';
 import '../view_models/accessibility_view_model.dart';
 
 class AccessibilityScreen extends StatefulWidget {
@@ -25,55 +22,43 @@ class AccessibilityScreen extends StatefulWidget {
 
 class _AccessibilityScreenState extends State<AccessibilityScreen>
     with WidgetsBindingObserver {
-  late final AccessibilityViewModel _viewModel;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _viewModel =
-        AccessibilityViewModel(getIt<AuthRepository>(), getIt<CrepeService>());
-
-    // No need to check native status if we're on the web
     if (!kIsWeb) {
-      _viewModel.checkStatus();
+      context.read<AccessibilityViewModel>().checkStatus();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _viewModel.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !kIsWeb) {
-      _viewModel.checkStatus().then((_) {
-        // If they were trapped and finally enabled it, release them!
-        if (widget.isMandatory && _viewModel.isEnabled.value && mounted) {
-          getIt<AuthTokenStore>().setNeedsAccessibilityAcceptance(false);
-          context.go('/');
-        }
-      });
+      context.read<AccessibilityViewModel>().checkStatus();
     }
   }
 
   // Escape hatch for trapped users
   Future<void> _handleLogout() async {
-    await _viewModel.logout();
+    await context.read<AccessibilityViewModel>().logout();
     if (mounted) context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final vm = context.read<AccessibilityViewModel>();
 
     return ListenableBuilder(
       listenable: Listenable.merge([
-        _viewModel.isEnabled,
-        _viewModel.isLoading,
+        vm.isEnabled,
+        vm.isLoading,
       ]),
       builder: (context, _) {
         final Widget content = _buildBody(context, theme);
@@ -94,7 +79,8 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>
   }
 
   Widget _buildBody(BuildContext context, ThemeData theme) {
-    final isEnabled = _viewModel.isEnabled.value;
+    final vm = context.read<AccessibilityViewModel>();
+    final isEnabled = vm.isEnabled.value;
 
     return Center(
       child: ConstrainedBox(
@@ -122,10 +108,9 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>
                         child: Text(
                           kIsWeb
                               ? "For Handlebar's data collection to work properly, it relies on the Handlebar Accessibility Service to read the device's screen.\n\n"
-                                  "As such, you will not be able to access Handlebar's core functions until it is enabled.\n\n"
-                                  "This feature is only available on the mobile application."
+                                  "Since this is only available on the mobile application, you will not be able to access Handlebar's collector-related functions on the web."
                               : "For Handlebar's data collection to work properly, it relies on the Handlebar Accessibility Service to read the device's screen.\n\n"
-                                  "As such, you will not be able to access Handlebar's core functions until it is enabled.\n\n"
+                                  "As such, you will not be able to access Handlebar's collector-related functions until it is enabled.\n\n"
                                   "To enable/disable the Accessibility Service:\n"
                                   "1. Click 'Go to Accessibility Settings' below\n"
                                   "2. Click on 'Installed apps'\n"
@@ -142,8 +127,8 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>
                         Center(
                           child: HandlebarButton.primary(
                             label: 'Go to Accessibility Settings',
-                            isLoading: _viewModel.isLoading.value,
-                            onPressed: () => _viewModel.openSettings(),
+                            isLoading: vm.isLoading.value,
+                            onPressed: () => vm.openSettings(),
                           ),
                         ),
                         Spacing.vSpace16,
@@ -152,8 +137,8 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>
                           child: Center(
                             child: Text(
                               isEnabled
-                                  ? 'Accessibility Service is currently ENABLED'
-                                  : 'Accessibility Service is currently DISABLED',
+                                  ? '✅ Accessibility Service is currently ENABLED'
+                                  : '❌ Accessibility Service is currently DISABLED',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontStyle: FontStyle.italic,
                               ),

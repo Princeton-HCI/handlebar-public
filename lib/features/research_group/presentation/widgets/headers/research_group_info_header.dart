@@ -3,7 +3,7 @@ import 'package:handlebar/core/extensions/context_extensions.dart';
 
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../../core/shared_widgets/buttons/handlebar_button.dart';
-import '../../../models/research_group.dart';
+import '../../../../study/data/models/research_study.dart';
 import '../../view_models/research_group_detail_view_model.dart';
 import '../dialogs/delete_group_dialog.dart';
 
@@ -23,7 +23,7 @@ class ResearchGroupInfoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ResearchGroup?>(
+    return ValueListenableBuilder<ResearchStudy?>(
         valueListenable: vm.group,
         builder: (context, group, _) {
           final scheme = context.colorScheme;

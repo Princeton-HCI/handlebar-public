@@ -7,6 +7,7 @@ import 'package:handlebar/features/crepe/models/match_result.dart';
 import 'package:handlebar/core/shared_services/notification_service.dart';
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 import '../../../app/app_locator.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/storage/auth_token_store.dart';
 import '../models/crepe_event.dart';
 import 'crepe_service.dart';
@@ -142,7 +143,7 @@ class CollectorService {
           _activeCollectors = ActiveCollectors(collectors: response);
           return true;
         },
-        onFailure: (error) {
+        onFailure: (ApiError error) {
           log('❌ [CollectorService] Failed to get collectors: ${error.message}');
           return false;
         },

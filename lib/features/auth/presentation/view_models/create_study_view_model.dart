@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
-import '../../../../app/app_locator.dart';
+import '../../../../core/network/api_error.dart';
 import '../../../research_group/data/research_group_repository.dart';
 
 class CreateStudyViewModel {
-  // TODO: Constructor injection instead for testing later
-  final _rgRepo = getIt<ResearchGroupRepository>();
+  final ResearchGroupRepository _rgRepo;
+
+  CreateStudyViewModel({required ResearchGroupRepository rgRepo})
+      : _rgRepo = rgRepo;
 
   final ValueNotifier<bool> isSubmitting = ValueNotifier(false);
   final ValueNotifier<String?> errorMessage = ValueNotifier(null);
@@ -21,7 +23,7 @@ class CreateStudyViewModel {
       onSuccess: (_) {
         success = true;
       },
-      onFailure: (error) {
+      onFailure: (ApiError error) {
         errorMessage.value = error.message;
         success = false;
       },

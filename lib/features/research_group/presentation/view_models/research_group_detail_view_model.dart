@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../app/app_locator.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_error.dart';
 import '../../../crepe/data/crepe_event_repository.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../../study/data/models/research_study_member.dart';
 import '../../data/research_group_collector_repository.dart';
 import '../../data/research_group_membership_repository.dart';
 import '../../data/research_group_repository.dart';
-import '../../models/research_group.dart';
-import '../../models/research_group_member.dart';
+import '../../../study/data/models/research_study.dart';
 
 class ResearchGroupDetailViewModel {
   final String studyCode;
@@ -23,7 +23,7 @@ class ResearchGroupDetailViewModel {
   ResearchGroupDetailViewModel({required this.studyCode});
 
   // Now nullable, starts as null while fetching
-  final ValueNotifier<ResearchGroup?> group = ValueNotifier(null);
+  final ValueNotifier<ResearchStudy?> group = ValueNotifier(null);
 
   int? get _groupId => group.value?.id;
 
@@ -43,8 +43,8 @@ class ResearchGroupDetailViewModel {
   final ValueNotifier<String?> errorMessage = ValueNotifier(null);
 
   // ---- Membership state ----
-  final ValueNotifier<List<ResearchGroupMember>> members = ValueNotifier([]);
-  final ValueNotifier<ResearchGroupMember?> myMembership = ValueNotifier(null);
+  final ValueNotifier<List<ResearchStudyMember>> members = ValueNotifier([]);
+  final ValueNotifier<ResearchStudyMember?> myMembership = ValueNotifier(null);
 
   // ---- Collector state ----
   final ValueNotifier<List<Collector>> collectors = ValueNotifier([]);
@@ -59,7 +59,7 @@ class ResearchGroupDetailViewModel {
   final ValueNotifier<List<CrepeEvent>> memberDetailEvents = ValueNotifier([]);
   final ValueNotifier<bool> isMemberDetailLoading = ValueNotifier(false);
   final ValueNotifier<bool> hasMoreMemberEvents = ValueNotifier(true);
-  List<ResearchGroupMember> get otherMembers {
+  List<ResearchStudyMember> get otherMembers {
     final myId = myMembership.value?.membershipId;
     if (myId == null) return members.value;
 
@@ -67,7 +67,7 @@ class ResearchGroupDetailViewModel {
     return members.value.where((m) => m.membershipId != myId).toList();
   }
 
-  ResearchGroupMember? _currentDetailMember;
+  ResearchStudyMember? _currentDetailMember;
   String? _memberEventsCursor;
 
   // ================
@@ -82,11 +82,12 @@ class ResearchGroupDetailViewModel {
     // 1. Fetch the group by code first
     final groupResult = await _rgRepo.lookupByCode(studyCode);
 
-    ResearchGroup? fetchedGroup;
-    groupResult.fold(
-      onSuccess: (g) => fetchedGroup = g,
-      onFailure: (ApiError e) => errorMessage.value = e.message,
-    );
+    ResearchStudy? fetchedGroup;
+    groupResult.fold(onSuccess: (g) {
+      fetchedGroup = g;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+    });
 
     // If we failed to fetch the group (e.g. 404 Not Found), stop here.
     if (fetchedGroup == null) {
@@ -116,21 +117,27 @@ class ResearchGroupDetailViewModel {
 
     // Handle collector result
     final collectorsRes = results[0] as CollectorsResult;
-    collectorsRes.fold(
-        onSuccess: (list) => collectors.value = list,
-        onFailure: (ApiError e) => errorMessage.value = e.message);
+    collectorsRes.fold(onSuccess: (list) {
+      collectors.value = list;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+    });
 
     // Handle own membership result
     final ownMembershipRes = results[1] as MemberResult;
-    ownMembershipRes.fold(
-        onSuccess: (membership) => myMembership.value = membership,
-        onFailure: (ApiError e) => errorMessage.value = e.message);
+    ownMembershipRes.fold(onSuccess: (membership) {
+      myMembership.value = membership;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+    });
 
     // Handle membership list result if researcher
     if (memberFuture != null) {
-      (results.last as MembersResult).fold(
-          onSuccess: (list) => members.value = list,
-          onFailure: (ApiError e) => errorMessage.value = e.message);
+      (results.last as MembersResult).fold(onSuccess: (list) {
+        members.value = list;
+      }, onFailure: (ApiError e) {
+        errorMessage.value = e.message;
+      });
     }
 
     isInitialized.value = true;
@@ -147,7 +154,7 @@ class ResearchGroupDetailViewModel {
     final res = await _rgMembershipRepo.addResearcherByEmail(_groupId!, email);
 
     return res.fold(onSuccess: (newMember) {
-      final currentList = List<ResearchGroupMember>.from(members.value);
+      final currentList = List<ResearchStudyMember>.from(members.value);
 
       // Upsert the member into current list
       final index = currentList
@@ -170,7 +177,7 @@ class ResearchGroupDetailViewModel {
 
       members.value = currentList;
       return true;
-    }, onFailure: (e) {
+    }, onFailure: (ApiError e) {
       errorMessage.value = e.message;
       return false;
     });
@@ -211,7 +218,7 @@ class ResearchGroupDetailViewModel {
   // ================
 
   /// Retrieves the selected member's details and Crepe events for display
-  Future<void> openMemberDetails(ResearchGroupMember member) async {
+  Future<void> openMemberDetails(ResearchStudyMember member) async {
     _currentDetailMember = member;
     _memberEventsCursor = null;
     hasMoreMemberEvents.value = true;

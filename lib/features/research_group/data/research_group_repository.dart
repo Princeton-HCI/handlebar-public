@@ -1,15 +1,17 @@
 import 'dart:convert';
+import 'package:handlebar/core/network/api_executor.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/utils/result.dart';
-import '../models/research_group.dart';
+import '../../study/data/models/research_study.dart';
 
-typedef GroupsResult = Result<List<ResearchGroup>, ApiError>;
-typedef GroupResult = Result<ResearchGroup, ApiError>;
-typedef GroupDeleteResult = Result<bool, ApiError>;
+typedef GroupsResult = Result<List<ResearchStudy>, ApiError>;
+typedef GroupResult = Result<ResearchStudy, ApiError>;
+typedef BoolResult = Result<bool, ApiError>;
 
-class ResearchGroupRepository {
+class ResearchGroupRepository with ApiExecutor {
   final ApiClient _api;
   final _logger = Logger('ResearchGroupRepository');
 
@@ -19,166 +21,187 @@ class ResearchGroupRepository {
 
   Future<GroupsResult> listUserResearchGroups() async {
     final action = 'listUserResearchGroups';
-    try {
-      _logger.info('Starting $action request...');
-      final res = await _api.get(_base);
+    return executeRequest<List<ResearchStudy>>(
+      action: action,
+      logger: _logger,
+      request: () => _api.get(_base),
+      onResponse: (res) {
+        if (res.statusCode == 200) {
+          final map = jsonDecode(res.body) as Map<String, dynamic>;
+          final items = (map['data'] as List).cast<Map<String, dynamic>>();
+          final groups = items.map(ResearchStudy.fromJson).toList();
+          _logger.info('$action successful');
+          return Success(groups);
+        }
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final items = (map['data'] as List).cast<Map<String, dynamic>>();
-        final groups = items.map(ResearchGroup.fromJson).toList();
-        _logger.info('$action successful');
-        return Success(groups);
-      }
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
 
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
-    } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: action);
-    } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
-    }
+        return null;
+      },
+    );
   }
 
   Future<GroupResult> lookupByCode(String code) async {
     final action = 'lookupByCode';
-    try {
-      _logger.info('Starting $action request...');
-      final res = await _api.get('$_base/lookup/$code');
+    return executeRequest<ResearchStudy>(
+      action: action,
+      logger: _logger,
+      request: () => _api.get('$_base/lookup/$code'),
+      onResponse: (res) {
+        if (res.statusCode == 200) {
+          final map = jsonDecode(res.body) as Map<String, dynamic>;
+          final group =
+              ResearchStudy.fromJson(map['data'] as Map<String, dynamic>);
+          _logger.info('$action successful');
+          return Success(group);
+        }
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final group =
-            ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
-        _logger.info('$action successful');
-        return Success(group);
-      }
+        if (res.statusCode == 404) {
+          final msg = 'Group not found';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 404));
+        }
 
-      if (res.statusCode == 404) {
-        final msg = 'Group not found';
-        _logger.warning('$action failed - $msg');
-        return Failure(ApiError(message: msg, statusCode: 404));
-      }
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
 
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
+        return null;
+      },
+    );
+  }
 
-      return ApiClient.unhandledFailure(_logger, res, action: action);
-    } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: action);
-    } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
-    }
+  Future<BoolResult> joinByCode(String code) async {
+    final action = 'joinByCode($code)';
+    return executeRequest<bool>(
+      action: action,
+      logger: _logger,
+      request: () => _api.post('$_base/memberships/join', body: {'code': code}),
+      onResponse: (res) {
+        if (res.statusCode == 201) {
+          _logger.info('$action successful');
+          return const Success(true);
+        }
+
+        if (res.statusCode == 404) {
+          final msg = 'Group not found';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 404));
+        }
+
+        if (res.statusCode == 409) {
+          final msg = 'Already a member';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 409));
+        }
+
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
+
+        return null;
+      },
+    );
   }
 
   Future<GroupResult> create(
       {required String name, required String description}) async {
     final action = 'create($name)';
-    try {
-      _logger.info('Starting $action request...');
-      final res = await _api.post(_base, body: {
+    return executeRequest<ResearchStudy>(
+      action: action,
+      logger: _logger,
+      request: () => _api.post(_base, body: {
         'research_group': {
           'name': name,
           'description': description,
         },
-      });
+      }),
+      onResponse: (res) {
+        if (res.statusCode == 201) {
+          final map = jsonDecode(res.body) as Map<String, dynamic>;
+          final group =
+              ResearchStudy.fromJson(map['data'] as Map<String, dynamic>);
+          _logger.info('$action successful');
+          return Success(group);
+        }
 
-      if (res.statusCode == 201) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final group =
-            ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
 
-        _logger.info('$action successful');
-        return Success(group);
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-      return ApiClient.unhandledFailure(_logger, res, action: action);
-    } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: action);
-    } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
-    }
+        return null;
+      },
+    );
   }
 
   Future<GroupResult> update(int id,
       {String? name, String? description}) async {
     final action = 'update($id)';
-    try {
-      _logger.info('Starting $action request');
-      final attrs = <String, dynamic>{};
-      if (name != null) attrs['name'] = name;
-      if (description != null) attrs['description'] = description;
+    return executeRequest<ResearchStudy>(
+      action: action,
+      logger: _logger,
+      request: () {
+        final attrs = <String, dynamic>{};
+        if (name != null) attrs['name'] = name;
+        if (description != null) attrs['description'] = description;
+        return _api.patch('$_base/$id', body: {'research_group': attrs});
+      },
+      onResponse: (res) {
+        if (res.statusCode == 200) {
+          final map = jsonDecode(res.body) as Map<String, dynamic>;
+          final group =
+              ResearchStudy.fromJson(map['data'] as Map<String, dynamic>);
+          _logger.info('$action successful');
+          return Success(group);
+        }
 
-      final res =
-          await _api.patch('$_base/$id', body: {'research_group': attrs});
+        if (res.statusCode == 404) {
+          final msg = 'Group not found';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 404));
+        }
 
-      if (res.statusCode == 200) {
-        final map = jsonDecode(res.body) as Map<String, dynamic>;
-        final group =
-            ResearchGroup.fromJson(map['data'] as Map<String, dynamic>);
-        _logger.info('$action successful');
-        return Success(group);
-      }
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
+        if (ApiClient.isForbidden(res)) {
+          return ApiClient.forbiddenFailure(_logger, action: action);
+        }
 
-      if (res.statusCode == 404) {
-        final msg = 'Group not found';
-        _logger.warning('$action failed - $msg');
-        return Failure(ApiError(message: msg, statusCode: 404));
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
-    } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: action);
-    } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
-    }
+        return null;
+      },
+    );
   }
 
-  Future<GroupDeleteResult> delete(int id) async {
+  Future<BoolResult> delete(int id) async {
     final action = 'delete($id)';
-    try {
-      _logger.info('Starting $action request...');
-      final res = await _api.delete('$_base/$id');
+    return executeRequest<bool>(
+      action: action,
+      logger: _logger,
+      request: () => _api.delete('$_base/$id'),
+      onResponse: (res) {
+        if (res.statusCode == 204) {
+          _logger.info('delete successful');
+          return const Success(true);
+        }
 
-      if (res.statusCode == 204) {
-        _logger.info('delete successful');
-        return const Success(true);
-      }
+        if (res.statusCode == 404) {
+          final msg = 'Group not found';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 404));
+        }
 
-      if (res.statusCode == 404) {
-        final msg = 'Group not found';
-        _logger.warning('$action failed - $msg');
-        return Failure(ApiError(message: msg, statusCode: 404));
-      }
+        if (ApiClient.isForbidden(res)) {
+          return ApiClient.forbiddenFailure(_logger, action: action);
+        }
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
 
-      if (ApiClient.isForbidden(res)) {
-        return ApiClient.forbiddenFailure(_logger, action: action);
-      }
-
-      if (ApiClient.isUnauthorized(res)) {
-        return ApiClient.unauthorizedFailure(_logger, action: action);
-      }
-
-      return ApiClient.unhandledFailure(_logger, res, action: action);
-    } on ApiException catch (e) {
-      return ApiClient.connectionFailure(_logger, e, action: action);
-    } catch (e, st) {
-      return ApiClient.unexpectedFailure(_logger, e, st, action: action);
-    }
+        return null;
+      },
+    );
   }
 }

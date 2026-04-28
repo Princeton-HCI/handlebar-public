@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:handlebar/app/app_locator.dart';
+import 'package:handlebar/core/network/api_error.dart';
 import 'package:handlebar/features/crepe/data/snapshot_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 
@@ -54,7 +55,7 @@ class CollectorCreationViewModel {
         );
         isResolvingCode.value = false;
       },
-      onFailure: (error) {
+      onFailure: (ApiError error) {
         errorMessage.value = error.message;
         isResolvingCode.value = false;
       },

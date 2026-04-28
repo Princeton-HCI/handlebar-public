@@ -11,8 +11,10 @@ class HandlebarTextField extends StatefulWidget {
   final bool isPassword;
   final bool isReadOnly;
   final bool enableInteractiveSelection;
+  final bool enabled;
   final TextInputType keyboardType;
   final int maxLines;
+  final TextCapitalization textCapitalization;
 
   final String? hintText;
   final Iterable<String>? autofillHints;
@@ -33,7 +35,9 @@ class HandlebarTextField extends StatefulWidget {
     this.isPassword = false,
     this.isReadOnly = false,
     this.enableInteractiveSelection = true,
+    this.enabled = true,
     this.maxLines = 1,
+    this.textCapitalization = TextCapitalization.none,
     this.hintText,
     this.autofillHints,
     this.validator,
@@ -66,14 +70,18 @@ class _HandlebarTextFieldState extends State<HandlebarTextField> {
     final Widget? suffixWidget = widget.isPassword
         ? IconButton(
             padding: const EdgeInsets.all(Spacing.token8),
-            onPressed: () {
-              setState(() {
-                _obscure = !_obscure;
-              });
-            },
+            onPressed: widget.enabled
+                ? () {
+                    setState(() {
+                      _obscure = !_obscure;
+                    });
+                  }
+                : null,
             icon: Icon(
               _obscure ? Icons.visibility_off : Icons.visibility,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: widget.enabled
+                  ? theme.colorScheme.onSurfaceVariant
+                  : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           )
         : widget.suffixIcon;
@@ -89,9 +97,11 @@ class _HandlebarTextFieldState extends State<HandlebarTextField> {
       focusNode: widget.focusNode,
       obscureText: _obscure,
       textInputAction: widget.textInputAction,
+      textCapitalization: widget.textCapitalization,
       onFieldSubmitted: widget.onFieldSubmitted,
       readOnly: widget.isReadOnly,
-      onTap: widget.onTap,
+      enabled: widget.enabled,
+      onTap: widget.enabled ? widget.onTap : null,
       enableInteractiveSelection: widget.enableInteractiveSelection,
       decoration: InputDecoration(
         hintText: widget.hintText,
@@ -125,6 +135,9 @@ class _HandlebarTextFieldState extends State<HandlebarTextField> {
             text: widget.label!,
             style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
+              color: widget.enabled
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             children: [
               if (widget.isRequired)

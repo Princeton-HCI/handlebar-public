@@ -10,7 +10,7 @@ import 'package:handlebar/features/researcher/data/live_test_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_error.dart';
 import '../../../crepe/data/snapshot_repository.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/data_field.dart';

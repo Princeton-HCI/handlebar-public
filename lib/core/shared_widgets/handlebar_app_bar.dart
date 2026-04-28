@@ -10,6 +10,7 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showBackArrow;
   final bool showMenu;
   final VoidCallback? onMenuPressed;
+  final List<Widget>? actions;
 
   const HandlebarAppBar({
     super.key,
@@ -18,11 +19,12 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBackArrow = true,
     this.showMenu = false,
     this.onMenuPressed,
+    this.actions,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 1. THE DESKTOP GHOST MODE
+    // THE DESKTOP GHOST MODE
     final isMobile = context.width <= Breakpoints.mobileMax;
     if (!isMobile) {
       return const PreferredSize(
@@ -31,7 +33,7 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // 2. THE NORMAL MOBILE MODE
+    // THE NORMAL MOBILE MODE
     final scheme = context.colorScheme;
 
     return AppBar(
@@ -67,6 +69,8 @@ class HandlebarAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
 
       actions: [
+        if (actions != null) ...actions!,
+
         if (showMenu)
           IconButton(
             onPressed:

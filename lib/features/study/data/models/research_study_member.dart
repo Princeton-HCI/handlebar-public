@@ -1,5 +1,5 @@
 /// Represents the membership of a user to a particular research group
-class ResearchGroupMember {
+class ResearchStudyMember {
   final int membershipId;
   final int userId;
   final String firstName;
@@ -9,7 +9,7 @@ class ResearchGroupMember {
   final DateTime? unenrolledAt; // null if the participant is active
   final String retentionPref; // "delete_all" | "keep_collected"
 
-  const ResearchGroupMember({
+  const ResearchStudyMember({
     required this.membershipId,
     required this.userId,
     required this.role,
@@ -26,8 +26,8 @@ class ResearchGroupMember {
 
   bool get isResearcher => role == 'researcher';
 
-  factory ResearchGroupMember.fromJson(Map<String, dynamic> j) =>
-      ResearchGroupMember(
+  factory ResearchStudyMember.fromJson(Map<String, dynamic> j) =>
+      ResearchStudyMember(
         membershipId: j['membership_id'] as int,
         userId: j['user_id'] as int,
         firstName: (j['first_name'] ?? '') as String,
@@ -40,7 +40,7 @@ class ResearchGroupMember {
         retentionPref: j['retention_pref_on_unenroll'] as String,
       );
 
-  ResearchGroupMember copyWith({
+  ResearchStudyMember copyWith({
     int? membershipId,
     int? userId,
     String? firstName,
@@ -50,7 +50,7 @@ class ResearchGroupMember {
     DateTime? unenrolledAt,
     String? retentionPref,
   }) {
-    return ResearchGroupMember(
+    return ResearchStudyMember(
       membershipId: membershipId ?? this.membershipId,
       userId: userId ?? this.userId,
       firstName: firstName ?? this.firstName,

@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../crepe/models/crepe_event.dart';
-import '../../../models/research_group_member.dart';
+import '../../../../study/data/models/research_study_member.dart';
 import '../../view_models/research_group_detail_view_model.dart';
 import '../cards/crepe_event_card.dart';
 
@@ -13,7 +13,7 @@ import '../cards/crepe_event_card.dart';
 /// data fields)
 class MemberDetailSheet extends StatefulWidget {
   final ResearchGroupDetailViewModel vm;
-  final ResearchGroupMember member;
+  final ResearchStudyMember member;
 
   const MemberDetailSheet({
     super.key,

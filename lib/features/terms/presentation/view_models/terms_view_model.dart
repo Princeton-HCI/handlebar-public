@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:handlebar/core/network/api_error.dart';
 import 'package:handlebar/features/auth/data/auth_repository.dart';
 
 import '../../../../app/app_locator.dart';
+import '../../../../core/shared_services/notification_service.dart';
 import '../../../../core/storage/auth_token_store.dart';
 import '../../data/terms_repository.dart';
 import '../../models/accepted_terms.dart';
@@ -12,7 +14,11 @@ class TermsViewModel {
   final AuthRepository _authRepo;
   final TermsRepository _termsRepo;
 
-  TermsViewModel(this._authRepo, this._termsRepo);
+  TermsViewModel({
+    required AuthRepository authRepo,
+    required TermsRepository termsRepo,
+  })  : _authRepo = authRepo,
+        _termsRepo = termsRepo;
 
   // --- STATE ---
   final ValueNotifier<CurrentTermsResponse?> response = ValueNotifier(null);
@@ -22,7 +28,6 @@ class TermsViewModel {
   final ValueNotifier<bool> isAccepting = ValueNotifier(false);
 
   // --- DERIVED PROPERTIES ---
-  // These just read from the current value of the response notifier
   Terms? get termsToDisplay => response.value?.currentTerms;
 
   bool get needsToAccept =>
@@ -40,7 +45,7 @@ class TermsViewModel {
       onSuccess: (data) {
         response.value = data;
       },
-      onFailure: (error) {
+      onFailure: (ApiError error) {
         errorMessage.value = error.message;
       },
     );
@@ -77,8 +82,8 @@ class TermsViewModel {
 
         await getIt<AuthTokenStore>().markTermsAsAcceptedLocally();
       },
-      onFailure: (error) {
-        errorMessage.value = error.message;
+      onFailure: (ApiError e) async {
+        NotificationService().showError(e.message);
       },
     );
 
@@ -91,7 +96,6 @@ class TermsViewModel {
     await _authRepo.logout();
   }
 
-  // Always clean up your notifiers!
   void dispose() {
     response.dispose();
     isLoading.dispose();

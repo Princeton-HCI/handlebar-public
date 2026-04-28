@@ -1,5 +1,5 @@
 /// Represents the information for a particular research group
-class ResearchGroup {
+class ResearchStudy {
   final int id;
   final String name;
   final String description;
@@ -8,7 +8,7 @@ class ResearchGroup {
 
   final int activeComponentCount;
 
-  const ResearchGroup(
+  const ResearchStudy(
       {required this.id,
       required this.name,
       required this.description,
@@ -16,7 +16,7 @@ class ResearchGroup {
       this.role,
       this.activeComponentCount = 0});
 
-  factory ResearchGroup.fromJson(Map<String, dynamic> json) => ResearchGroup(
+  factory ResearchStudy.fromJson(Map<String, dynamic> json) => ResearchStudy(
         id: json['id'] as int,
         name: json['name'] as String,
         description: json['description'] as String,

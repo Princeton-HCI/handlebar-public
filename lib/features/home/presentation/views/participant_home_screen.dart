@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:handlebar/features/research_group/presentation/widgets/dialogs/join_group_dialog.dart';
+import 'package:handlebar/features/home/presentation/widgets/join_group_dialog.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/design-system/breakpoints.dart';
@@ -9,6 +9,7 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/handlebar_button.dart';
 import '../../../../core/shared_widgets/handlebar_layout.dart';
+import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
 import '../view_models/participant_home_view_model.dart';
 import '../widgets/study_card.dart';
@@ -46,60 +47,85 @@ class _ParticipantHomeScreenState extends State<ParticipantHomeScreen> {
       ),
       endDrawer: const HandlebarMobileDrawer(),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.stretch, // Keeps text/grid full width
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ValueListenableBuilder(
-            valueListenable: vm.studies,
-            builder: (context, studies, _) {
-              return Text(
-                'You are part of ${studies.length} ${_pluralize(studies.length)}.',
-                style: context.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              );
-            },
-          ),
-          Spacing.vSpace24,
           Expanded(
             child: ListenableBuilder(
               listenable:
                   Listenable.merge([vm.isLoading, vm.errorMessage, vm.studies]),
               builder: (context, _) {
+                // Loading State
                 if (vm.isLoading.value) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Error State
                 if (vm.errorMessage.value != null) {
-                  return Center(child: Text(vm.errorMessage.value!));
+                  return PassiveErrorView(
+                    message: "Could not load your studies.",
+                    subtitle: vm.errorMessage.value,
+                    onRetry: () => vm.loadStudies(),
+                  );
                 }
 
-                return RefreshIndicator(
-                  onRefresh: vm.loadStudies,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(Spacing.token16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          isDesktop ? 2 : 1, // 2 on desktop, 1 on mobile
-                      crossAxisSpacing:
-                          Spacing.token24, // Gap between the two columns
-                      mainAxisSpacing: 0,
-                      // Flutter GridViews need to know how tall the items are.
-                      // 180px perfectly fits the StudyCard constraints.
-                      mainAxisExtent: 180,
+                // Success State
+                final studies = vm.studies.value;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Headline placed inside the success block
+                    Text(
+                      'You are participating in ${studies.length} ${_pluralize(studies.length)}.',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
                     ),
-                    itemCount: vm.studies.value.length,
-                    itemBuilder: (context, index) {
-                      final study = vm.studies.value[index];
-                      return StudyCard(
-                        group: study,
-                        onTap: () => context.push('/studies/${study.code}'),
-                      );
-                    },
-                  ),
+
+                    Spacing.vSpace24,
+
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: vm.loadStudies,
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(Spacing.token16),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount:
+                                isDesktop ? 2 : 1, // 2 on desktop, 1 on mobile
+                            crossAxisSpacing:
+                                Spacing.token32, // Gap between the two columns
+                            mainAxisSpacing: 0,
+                            // Flutter GridViews need to know how tall the items are.
+                            // 180px perfectly fits the StudyCard constraints.
+                            mainAxisExtent: 180,
+                          ),
+                          itemCount: studies.length,
+                          itemBuilder: (context, index) {
+                            final study = studies[index];
+                            return StudyCard(
+                              group: study,
+                              onTap: () async {
+                                // Wait for the detail screen to pop
+                                final didChange = await context
+                                    .push<bool>('/studies/${study.code}');
+
+                                // If it returns true (meaning deleted or left), reload the list
+                                if (didChange == true && context.mounted) {
+                                  vm.loadStudies();
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           ),
+
+          // Join Study Button (Stays pinned to the bottom regardless of state)
           Padding(
             padding: const EdgeInsets.only(top: Spacing.token16),
             child: Center(

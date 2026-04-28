@@ -8,11 +8,11 @@ import '../../../../crepe/models/data_field.dart';
 
 /// Bottom sheet for displaying a collector's details (description, app package,
 /// data fields)
-class CollectorDetailsBottomSheet extends StatelessWidget {
+class OldCollectorDetailsBottomSheet extends StatelessWidget {
   final Collector collector;
   final bool isResearcher;
 
-  const CollectorDetailsBottomSheet({
+  const OldCollectorDetailsBottomSheet({
     super.key,
     required this.collector,
     required this.isResearcher,

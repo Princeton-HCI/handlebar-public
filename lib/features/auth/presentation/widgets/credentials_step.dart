@@ -112,26 +112,6 @@ class _CredentialsStepState extends State<CredentialsStep> {
           ),
 
           Spacing.vSpace16,
-
-          // Error Message Display
-          ValueListenableBuilder<String?>(
-            valueListenable: widget.viewModel.errorMessage,
-            builder: (context, error, child) {
-              if (error == null) return const SizedBox.shrink();
-
-              return Padding(
-                padding: const EdgeInsets.only(top: Spacing.token16),
-                child: Text(
-                  error,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            },
-          ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 
 import '../storage/auth_token_store.dart';
 import 'api_env_config.dart';
+import 'api_error.dart';
 
 /// Thin HTTP client for interacting with the backend server that centralizes
 /// the creation of headers, request timeouts,
@@ -150,23 +151,4 @@ class ApiClient {
   /// Formats an HTTP error response
   static String errorMessage(http.Response res) =>
       'HTTP ${res.statusCode}: ${res.body}';
-}
-
-/// Exception for client-side API failures from no HTTP response
-class ApiException implements Exception {
-  final String message;
-  const ApiException._(this.message);
-  const ApiException.timeout() : this._("The connection has timed out");
-  const ApiException.network() : this._("The network is unreachable");
-  @override
-  String toString() => message;
-}
-
-/// Error value returned in [Failure] for server-side or translated errors
-class ApiError {
-  final String message;
-  final int? statusCode; // null for client-side (no HTTP response)
-  const ApiError({required this.message, this.statusCode});
-  @override
-  String toString() => 'ApiError($message, status: $statusCode)';
 }

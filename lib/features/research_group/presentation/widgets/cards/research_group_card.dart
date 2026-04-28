@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
-import 'package:handlebar/features/research_group/models/research_group.dart';
+import 'package:handlebar/features/study/data/models/research_study.dart';
 
 import '../../../../../app/design-system/spacing.dart';
 
-/// Tile for displaying a [ResearchGroup] in the research group UI
+/// Tile for displaying a [ResearchStudy] in the research group UI
 class ResearchGroupTile extends StatelessWidget {
-  final ResearchGroup group;
+  final ResearchStudy group;
   final VoidCallback? onTap;
 
   const ResearchGroupTile({super.key, required this.group, this.onTap});

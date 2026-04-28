@@ -8,7 +8,7 @@ import '../../view_models/research_group_dashboard_view_model.dart';
 
 /// Dialog for creating a research group
 class CreateGroupDialog extends StatefulWidget {
-  final ResearchGroupDashboardViewModel vm;
+  final OldResearchGroupDashboardViewModel vm;
 
   const CreateGroupDialog({super.key, required this.vm});
 

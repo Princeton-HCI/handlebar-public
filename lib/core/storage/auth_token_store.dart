@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
+import '../../app/app_locator.dart';
+import '../../features/crepe/services/crepe_service.dart';
+import '../../features/terms/data/terms_repository.dart';
 import 'secure_storage.dart';
 
 /// In-memory store for handling auth token persistence, session checks, and global
@@ -14,26 +17,68 @@ class AuthTokenStore extends ChangeNotifier {
 
   AuthTokenStore(this._storage);
 
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
+
   Future<void> init() async {
-    // 1. Tell the black box to initialize itself
     await _storage.initialize();
 
-    // 2. Read the strictly typed variables it prepared for us
+    // Read raw storage
     _needsTermsAcceptance = !_storage.termsAccepted;
     _userRole = _storage.role.isNotEmpty ? _storage.role : 'participant';
 
-    _logger.info("Storage initialization successful");
+    if (isAuthenticated) {
+      // 1. Check Terms
+      final termsRepo = getIt<TermsRepository>();
+      final result = await termsRepo.checkCurrentTerms();
+      result.fold(
+        onSuccess: (response) {
+          final needsToAccept = response.currentTerms != null &&
+              response.currentAcceptedTerms == null;
+          if (!needsToAccept) {
+            markTermsAsAcceptedLocally();
+          } else {
+            _needsTermsAcceptance = true;
+          }
+        },
+        onFailure: (error) =>
+            debugPrint("Terms check failed, relying on cache"),
+      );
+
+      // 2. Check Accessibility (If Mobile)
+      if (!kIsWeb) {
+        final isAccEnabled =
+            await getIt<CrepeService>().isAccessibilityServiceEnabled();
+        _needsAccessibilityAcceptance = !isAccEnabled;
+      }
+    }
+
+    // Tell GoRouter we are done booting
+    _isInitialized = true;
+    notifyListeners();
   }
 
   // ===========================================================================
   // SESSION MANAGEMENT
   // ===========================================================================
 
-  Future<void> saveAuthToken(String token) async {
-    _logger.info("Storing the auth token...");
-    // Let the wrapper handle the key names and expiration logic
+  Future<void> saveAuthToken({
+    required String token,
+    required bool hasAcceptedTerms,
+    required String role,
+  }) async {
+    _logger.info("Storing the auth token and user state...");
+
+    // Save to disk
     await _storage.saveAuthToken(token);
-    _logger.info("Auth token storage successful");
+    await _storage.saveTermsAccepted(hasAcceptedTerms);
+
+    // Update RAM
+    _needsTermsAcceptance = !hasAcceptedTerms;
+    _userRole = role;
+
+    _logger.info("Auth token and state storage successful");
+    notifyListeners();
   }
 
   Future<void> clearTokens() async {

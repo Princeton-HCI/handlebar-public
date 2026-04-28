@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
-import '../../../../app/app_locator.dart';
+import '../../../../core/network/api_error.dart';
 import '../../../research_group/data/research_group_repository.dart';
-import '../../../research_group/models/research_group.dart';
+import '../../../study/data/models/research_study.dart';
 
 class ResearcherHomeViewModel {
-  // TODO: Change to constructor injection for later testing
-  final _rgRepo = getIt<ResearchGroupRepository>();
+  final ResearchGroupRepository _rgRepo;
+
+  ResearcherHomeViewModel({required ResearchGroupRepository rgRepo})
+      : _rgRepo = rgRepo;
 
   final ValueNotifier<bool> isLoading = ValueNotifier(true);
   final ValueNotifier<String?> errorMessage = ValueNotifier(null);
-  final ValueNotifier<List<ResearchGroup>> studies = ValueNotifier([]);
+  final ValueNotifier<List<ResearchStudy>> studies = ValueNotifier([]);
 
   Future<void> loadStudies() async {
     isLoading.value = true;
@@ -22,7 +24,7 @@ class ResearcherHomeViewModel {
         // Filter strictly for studies this user manages
         studies.value = allGroups.where((g) => g.isResearcher).toList();
       },
-      onFailure: (error) {
+      onFailure: (ApiError error) {
         errorMessage.value = error.message;
       },
     );

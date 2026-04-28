@@ -39,7 +39,7 @@ class CollectorTile extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => CollectorDetailsBottomSheet(
+      builder: (ctx) => OldCollectorDetailsBottomSheet(
           collector: collector, isResearcher: onDelete != null),
     );
   }

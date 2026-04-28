@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 
+import '../../../core/network/api_error.dart';
 import '../../../core/utils/paginated_result.dart';
 import '../../../core/utils/result.dart';
 import '../models/crepe_event.dart';
@@ -123,8 +124,10 @@ class CrepeEventRepository {
         return ApiClient.unauthorizedFailure(_logger, action: action);
       }
 
-      final res = await _api
-          .post('$_base/crepe-event', body: {'crepe_event': event.toJson()});
+      final res = await _api.post(
+        '$_base/memberships/${event.membershipId}/crepe-events',
+        body: {'crepe_event': event.toJson()},
+      );
 
       if (ApiClient.isUnauthorized(res)) {
         return ApiClient.unauthorizedFailure(_logger, action: action);

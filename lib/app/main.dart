@@ -3,16 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:handlebar/app/splash_screen.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
 import 'package:logging/logging.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/storage/auth_token_store.dart';
 import '../features/crepe/services/collector_service.dart';
 import '../features/crepe/services/crepe_service.dart';
-import '../features/terms/data/terms_repository.dart';
 import 'app_locator.dart';
 import 'design-system/layout_theme.dart';
 import 'navigation_router.dart';
@@ -38,7 +36,7 @@ void main() async {
       });
 
       // Load stored auth tokens (Just reads from secure storage, doesn't validate network)
-      await getIt<AuthTokenStore>().init();
+      getIt<AuthTokenStore>().init();
 
       runApp(
         SentryWidget(
@@ -58,14 +56,10 @@ class HandlebarApp extends StatefulWidget {
 
 class _HandlebarAppState extends State<HandlebarApp>
     with WidgetsBindingObserver {
-  bool _isInitialized = false;
-  late final GoRouter _navRouter;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeAppState();
   }
 
   @override
@@ -96,70 +90,15 @@ class _HandlebarAppState extends State<HandlebarApp>
     }
   }
 
-  Future<void> _initializeAppState() async {
-    final authStore = getIt<AuthTokenStore>();
-
-    if (authStore.isAuthenticated) {
-      final termsRepo = getIt<TermsRepository>();
-      final result = await termsRepo.checkCurrentTerms();
-
-      result.fold(
-        onSuccess: (response) {
-          final needsToAccept = response.currentTerms != null &&
-              response.currentAcceptedTerms == null;
-
-          if (!needsToAccept) {
-            // Cache it locally so offline mode works next time they boot the app.
-            authStore.markTermsAsAcceptedLocally();
-          } else {
-            // They legitimately need to accept it.
-            authStore.setNeedsTermsAcceptance(true);
-          }
-        },
-        onFailure: (error) {
-          // NETWORK IS DOWN!
-          // Do nothing. authStore initialized the RAM flag from the hard drive
-          // cache during authStore.init() before this ran
-          debugPrint(
-              "Terms check failed, relying on local cache: ${!authStore.needsTermsAcceptance}");
-        },
-      );
-
-      if (!kIsWeb) {
-        // Explicitly protect this so web users don't get trapped by GoRouter
-        final crepeService = getIt<CrepeService>();
-        final isAccEnabled = await crepeService.isAccessibilityServiceEnabled();
-        authStore.setNeedsAccessibilityAcceptance(!isAccEnabled);
-      } else {
-        authStore.setNeedsAccessibilityAcceptance(false);
-      }
-    }
-
-    // Won't do anything if we're not on Android OS
-    await getIt<CollectorService>().syncMonitoringState();
-
-    _navRouter = navigationRouter();
-
-    if (mounted) {
-      setState(() {
-        _isInitialized = true;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const SplashScreen();
-    }
-
     final isTablet = context.width >= layoutTablet.tabletBreakpoint;
     final layoutTheme = isTablet ? layoutTablet : layoutMobile;
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Handlebar',
-      routerConfig: _navRouter,
+      routerConfig: navigationRouter,
       theme: _buildTheme(layoutTheme),
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         scrollbars: true,
@@ -198,6 +137,7 @@ class _HandlebarAppState extends State<HandlebarApp>
     return baseTheme.copyWith(
       scaffoldBackgroundColor: Colors.white,
       canvasColor: Colors.white,
+      textTheme: GoogleFonts.balsamiqSansTextTheme(baseTheme.textTheme),
       colorScheme: baseTheme.colorScheme.copyWith(
         surface: Colors.white,
         surfaceDim: Colors.white,
@@ -209,9 +149,22 @@ class _HandlebarAppState extends State<HandlebarApp>
         surfaceContainerLowest: Colors.white,
         surfaceTint: Colors.transparent,
       ),
+      popupMenuTheme: PopupMenuThemeData(
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          position: PopupMenuPosition.under,
+          menuPadding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: Colors.black, width: 1.5),
+            borderRadius: BorderRadius.circular(12.0),
+          )),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: Colors.black, width: 1.5),
+          borderRadius: BorderRadius.all(Radius.circular(4.0)),
+        ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Colors.white,

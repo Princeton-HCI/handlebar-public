@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:logging/logging.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/api_executor.dart';
 import '../../../core/utils/result.dart';
 import '../models/accepted_terms.dart';

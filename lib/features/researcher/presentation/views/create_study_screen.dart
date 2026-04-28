@@ -11,7 +11,7 @@ import '../../../../core/shared_widgets/handlebar_button.dart';
 import '../../../../core/shared_widgets/handlebar_text_field.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
 import '../../../../core/utils/validators.dart';
-import '../view_models/create_study_view_model.dart'; // Added import
+import '../../../auth/presentation/view_models/create_study_view_model.dart'; // Added import
 
 class CreateStudyScreen extends StatefulWidget {
   const CreateStudyScreen({super.key});

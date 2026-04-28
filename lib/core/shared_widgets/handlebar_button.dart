@@ -93,9 +93,7 @@ class HandlebarButton extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontWeight: variant == HandlebarButtonVariant.neutral
-                ? FontWeight.w500
-                : FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
@@ -171,6 +169,10 @@ class HandlebarButton extends StatelessWidget {
     final style = OutlinedButton.styleFrom(
       backgroundColor: colors.background,
       foregroundColor: colors.foreground,
+      elevation: effectiveOnPressed == null
+          ? 0
+          : 4, // Drops to 0 when loading/disabled
+      shadowColor: Colors.black.withValues(alpha: 0.5),
       disabledForegroundColor: isLoading
           ? colors.foreground
           : colors.foreground.withValues(alpha: 0.38),

@@ -160,8 +160,6 @@ class _Sidebar extends StatelessWidget {
                     Navigator.pop(context);
                   }
 
-                  // TODO: Breaks encapsulation, but maybe we don't care
-                  // since this is a unique UI?
                   await getIt<AuthRepository>().logout();
                 },
               ),
@@ -194,28 +192,39 @@ class _SidebarItem extends StatelessWidget {
     }
 
     final scheme = context.colorScheme;
-    final highlightColor = const Color(0xFF2196F3).withValues(alpha: 0.10);
 
-    return ListTile(
-      title: Text(
-        label,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-              color: isActive ? const Color(0xFF2196F3) : scheme.onSurface,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: isActive
+            ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(Spacing.token8),
+        border: Border.all(
+          color: isActive ? scheme.primary : Colors.transparent,
+          width: 2.0,
+        ),
       ),
-      tileColor: isActive ? highlightColor : Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      onTap: () {
-        if (isActive && currentPath == route) return;
+      child: ListTile(
+        hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        visualDensity: VisualDensity.compact,
+        title: Text(
+          label,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: isActive ? FontWeight.w900 : FontWeight.w500,
+                color: scheme.onSurface,
+              ),
+        ),
+        onTap: () {
+          if (isActive && currentPath == route) return;
 
-        if (Scaffold.of(context).hasDrawer &&
-            Scaffold.of(context).isDrawerOpen) {
-          Navigator.pop(context);
-        }
+          if (Scaffold.of(context).hasDrawer &&
+              Scaffold.of(context).isDrawerOpen) {
+            Navigator.pop(context);
+          }
 
-        context.go(route);
-      },
+          context.go(route);
+        },
+      ),
     );
   }
 }

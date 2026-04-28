@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:handlebar/core/shared_services/notification_service.dart';
 import 'package:handlebar/features/research_group/data/research_group_repository.dart';
 
+import '../../../../core/network/api_error.dart';
 import '../../../../core/storage/auth_token_store.dart';
 import '../../../crepe/services/crepe_service.dart';
 import '../../data/auth_repository.dart';
@@ -13,17 +15,22 @@ class SignupViewModel {
   final AuthTokenStore _authStore;
   final CrepeService _crepeService;
 
+  SignupViewModel({
+    required AuthRepository authRepo,
+    required ResearchGroupRepository groupRepo,
+    required AuthTokenStore authStore,
+    required CrepeService crepeService,
+  })  : _authRepo = authRepo,
+        _groupRepo = groupRepo,
+        _authStore = authStore,
+        _crepeService = crepeService;
+
   // --- UI State Notifiers ---
   final ValueNotifier<SignupRole> selectedRole = ValueNotifier(SignupRole.none);
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
-  final ValueNotifier<String?> errorMessage = ValueNotifier(null);
-
-  // Constructor Injection
-  SignupViewModel(
-      this._authRepo, this._groupRepo, this._authStore, this._crepeService);
-  String? studyCode;
 
   // --- Cache state ---
+  String? _studyCode;
   String? _lastCheckedCode;
   bool _lastCheckResult = false;
 
@@ -37,7 +44,7 @@ class SignupViewModel {
     final cleanCode = code.trim();
 
     if (cleanCode.isEmpty) {
-      errorMessage.value = "Please enter a valid study code.";
+      NotificationService().showError("Please enter a valid study code.");
       return false;
     }
 
@@ -49,28 +56,24 @@ class SignupViewModel {
 
     _lastCheckedCode = cleanCode;
     isLoading.value = true;
-    errorMessage.value = null;
 
     try {
       final result = await _groupRepo.lookupByCode(cleanCode);
 
-      // Always stop loading regardless of result
-      isLoading.value = false;
-
       return result.fold(
         onSuccess: (group) {
           _lastCheckResult = true;
-          studyCode = cleanCode;
+          _studyCode = cleanCode;
           return true;
         },
-        onFailure: (error) {
+        onFailure: (ApiError error) {
           _lastCheckResult = false;
-          errorMessage.value = error.message;
+          NotificationService().showError(error.message);
           return false;
         },
       );
     } catch (e) {
-      errorMessage.value = "An unexpected error occurred.";
+      NotificationService().showError("An unexpected error occurred.");
       return false;
     } finally {
       isLoading.value = false;
@@ -81,26 +84,25 @@ class SignupViewModel {
   // Called from the Final Screen (Email/Password entry)
   Future<bool> submitRegistration(String email, String password) async {
     if (selectedRole.value == SignupRole.participant &&
-        (studyCode == null || studyCode!.isEmpty)) {
-      errorMessage.value = "Missing study code for participant.";
+        (_studyCode == null || _studyCode!.isEmpty)) {
+      NotificationService().showError("Missing study code for participant.");
       return false;
     }
 
-    // Start loading
     isLoading.value = true;
-    errorMessage.value = null;
 
     try {
       // 1. Execute the signup
       final signupResult = await _authRepo.signup(email, password,
-          referral: studyCode, role: selectedRole.value.name);
+          referral: _studyCode, role: selectedRole.value.name);
 
       // 2. If signup fails, handle error and stop
       if (!signupResult.isSuccess) {
         signupResult.fold(
-          onSuccess: (_) {},
-          onFailure: (e) => errorMessage.value = e.message,
-        );
+            onSuccess: (_) {},
+            onFailure: (e) {
+              NotificationService().showError(e.message);
+            });
         return false; // Escapes the function early
       }
 
@@ -118,14 +120,15 @@ class SignupViewModel {
         _authStore.setNeedsAccessibilityAcceptance(false);
       }
 
-      return signupResult.fold(
-          onSuccess: (_) => true,
-          onFailure: (e) {
-            errorMessage.value = e.message;
-            return false;
-          });
+      return signupResult.fold(onSuccess: (_) {
+        NotificationService().showSuccess("Account successfully created!");
+        return true;
+      }, onFailure: (e) {
+        NotificationService().showError(e.message);
+        return false;
+      });
     } catch (e) {
-      errorMessage.value = "An unexpected error occurred.";
+      NotificationService().showError("An unexpected error occurred.");
       return false;
     } finally {
       isLoading.value = false;
@@ -134,6 +137,5 @@ class SignupViewModel {
 
   void dispose() {
     isLoading.dispose();
-    errorMessage.dispose();
   }
 }

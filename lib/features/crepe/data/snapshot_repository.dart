@@ -8,6 +8,7 @@ import 'package:handlebar/features/crepe/models/snapshot_entity_queries.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/utils/result.dart';
 import '../models/collector.dart';
 import '../models/snapshot.dart';

@@ -38,7 +38,6 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
   @override
   void initState() {
     super.initState();
-    NotificationService().setContext(context);
   }
 
   static final _videoPlayerWidth = Spacing.token288;

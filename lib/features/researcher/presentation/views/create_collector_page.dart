@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/shared_services/notification_service.dart';
 import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../view_models/collector_creation_view_model.dart';
@@ -23,7 +22,6 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
   @override
   void initState() {
     super.initState();
-    NotificationService().setContext(context);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CollectorCreationViewModel>().initialize();

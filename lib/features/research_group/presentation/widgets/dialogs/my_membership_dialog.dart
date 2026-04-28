@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../../core/shared_services/notification_service.dart';
-import '../../../models/research_group_member.dart';
+import '../../../../study/data/models/research_study_member.dart';
 import '../../view_models/research_group_detail_view_model.dart';
 
 /// Dialog for viewing the user's own membership and updating it
 class MyMembershipDialog extends StatefulWidget {
   final ResearchGroupDetailViewModel vm;
-  final ResearchGroupMember member;
+  final ResearchStudyMember member;
 
   const MyMembershipDialog({super.key, required this.vm, required this.member});
 

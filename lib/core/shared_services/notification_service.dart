@@ -7,12 +7,9 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  BuildContext? _context;
-  OverlayEntry? _currentToast;
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  void setContext(BuildContext context) {
-    _context = context;
-  }
+  OverlayEntry? _currentToast;
 
   void showSuccess(String message) {
     _showToast(message, ToastType.success);
@@ -31,25 +28,21 @@ class NotificationService {
   }
 
   void _showToast(String message, ToastType type) {
-    if (_context == null || !_context!.mounted) return;
+    // Grab the overlay directly from the GlobalKey
+    final overlayState = navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
 
-    // Remove current toast if exists
     _currentToast?.remove();
 
-    // Create new overlay entry
     _currentToast = OverlayEntry(
       builder: (context) => CustomToast(
         message: message,
         type: type,
-        onDismiss: () {
-          _currentToast?.remove();
-          _currentToast = null;
-        },
+        onDismiss: dismissCurrentToast,
       ),
     );
 
-    // Insert into overlay
-    Overlay.of(_context!).insert(_currentToast!);
+    overlayState.insert(_currentToast!);
   }
 
   void dismissCurrentToast() {

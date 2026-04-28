@@ -5,7 +5,7 @@ import 'package:handlebar/features/home/presentation/view_models/participant_hom
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../../core/shared_services/notification_service.dart';
 import '../../../../../core/utils/validators.dart';
-import '../../../models/research_group.dart';
+import '../../../../study/data/models/research_study.dart';
 import '../cards/research_group_card.dart';
 
 /// Dialog for joining a research group
@@ -27,7 +27,7 @@ class _JoinGroupDialogState extends State<JoinGroupDialog> {
 
   _JoinStep _step = _JoinStep.input;
   bool _isLoading = false;
-  ResearchGroup? _foundGroup;
+  ResearchStudy? _foundGroup;
 
   @override
   void dispose() {

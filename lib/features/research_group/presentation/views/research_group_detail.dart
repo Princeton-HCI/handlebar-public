@@ -9,8 +9,8 @@ import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
-import '../../models/research_group.dart';
-import '../../models/research_group_member.dart';
+import '../../../study/data/models/research_study.dart';
+import '../../../study/data/models/research_study_member.dart';
 import '../view_models/research_group_detail_view_model.dart';
 import '../widgets/bottom-sheets/member_detail_bottom_sheet.dart';
 import '../widgets/dialogs/add_researcher_dialog.dart';
@@ -39,7 +39,6 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
   @override
   void initState() {
     super.initState();
-    NotificationService().setContext(context);
 
     vm = context.read<ResearchGroupDetailViewModel>();
 
@@ -74,7 +73,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
     super.dispose();
   }
 
-  void _showMyMembershipDialog(ResearchGroupMember member) {
+  void _showMyMembershipDialog(ResearchStudyMember member) {
     showDialog(
       context: context,
       builder: (ctx) => MyMembershipDialog(vm: vm, member: member),
@@ -88,7 +87,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
     );
   }
 
-  void _showMemberDetailSheet(ResearchGroupMember member) {
+  void _showMemberDetailSheet(ResearchStudyMember member) {
     vm.openMemberDetails(member);
 
     showModalBottomSheet(
@@ -131,7 +130,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
 
   Widget _buildMyMembership() {
     return SliverToBoxAdapter(
-      child: ValueListenableBuilder<ResearchGroupMember?>(
+      child: ValueListenableBuilder<ResearchStudyMember?>(
         valueListenable: vm.myMembership,
         builder: (context, myMember, _) {
           if (myMember == null) return const SizedBox.shrink();
@@ -148,7 +147,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
   }
 
   Widget _buildMembersList() {
-    return ValueListenableBuilder<List<ResearchGroupMember>>(
+    return ValueListenableBuilder<List<ResearchStudyMember>>(
       valueListenable: vm.members,
       builder: (context, _, __) {
         final others = vm.otherMembers;
@@ -244,7 +243,7 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
           return const SizedBox.shrink();
         });
 
-    return ValueListenableBuilder<ResearchGroup?>(
+    return ValueListenableBuilder<ResearchStudy?>(
         valueListenable: vm.group,
         builder: (_, group, __) {
           return DynamicResponsiveScaffold(

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design-system/spacing.dart';
 import '../../../../core/extensions/context_extensions.dart';
-import '../../../research_group/models/research_group.dart';
+import '../../../study/data/models/research_study.dart';
 
 class StudyCard extends StatelessWidget {
-  final ResearchGroup group;
+  final ResearchStudy group;
   final VoidCallback? onTap;
 
   const StudyCard({
@@ -26,7 +26,7 @@ class StudyCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: Spacing.token16),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: scheme.outline, width: _borderWidth),
+        side: BorderSide(color: scheme.primary, width: _borderWidth),
         borderRadius: BorderRadius.circular(_borderRadius),
       ),
       color: Colors.transparent,

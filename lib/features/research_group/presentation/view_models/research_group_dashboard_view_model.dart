@@ -2,24 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:handlebar/features/crepe/data/crepe_event_repository.dart';
 import 'package:handlebar/features/crepe/models/participant_collector.dart';
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
-import 'package:handlebar/features/research_group/data/research_group_membership_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_repository.dart';
 import 'package:logging/logging.dart';
 
-import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_error.dart';
 import '../../../crepe/models/crepe_event.dart';
-import '../../models/research_group.dart';
+import '../../../study/data/models/research_study.dart';
 
-class ResearchGroupDashboardViewModel extends ChangeNotifier {
+class OldResearchGroupDashboardViewModel extends ChangeNotifier {
   static final _logger = Logger('VideoSessionViewModel');
 
   final ResearchGroupRepository _rgRepo;
   final ResearchGroupCollectorRepository _rgCollectorRepo;
-  final ResearchGroupMembershipRepository _rgMembershipRepo;
   final CrepeEventRepository _crepeEventRepository;
 
-  ResearchGroupDashboardViewModel(this._rgRepo, this._rgCollectorRepo,
-      this._rgMembershipRepo, this._crepeEventRepository);
+  OldResearchGroupDashboardViewModel(
+      this._rgRepo, this._rgCollectorRepo, this._crepeEventRepository);
 
   // ================
   // State variables
@@ -30,8 +28,8 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
   final ValueNotifier<String?> errorMessage = ValueNotifier(null);
 
   // ---- Public researcher group state ----
-  final ValueNotifier<List<ResearchGroup>> researcherGroups = ValueNotifier([]);
-  final ValueNotifier<List<ResearchGroup>> participantGroups =
+  final ValueNotifier<List<ResearchStudy>> researcherGroups = ValueNotifier([]);
+  final ValueNotifier<List<ResearchStudy>> participantGroups =
       ValueNotifier([]);
 
   // ---- Public collector state ----
@@ -44,7 +42,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
   final ValueNotifier<bool> hasMoreEvents = ValueNotifier(true);
 
   // ---- Private researcher group state ----
-  ResearchGroup? _lookupGroup;
+  ResearchStudy? _lookupGroup;
 
   // ---- Private event state ----
   String? _nextEventCursor; // for paginated event requests
@@ -70,31 +68,31 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
     final collectorRes = results[1] as ParticipantCollectorsResult;
 
     // Handle group result
-    groupRes.fold(
-        onSuccess: (allGroups) {
-          final researchers = <ResearchGroup>[];
-          final participants = <ResearchGroup>[];
+    groupRes.fold(onSuccess: (allGroups) {
+      final researchers = <ResearchStudy>[];
+      final participants = <ResearchStudy>[];
 
-          // Differentiate between participant groups and researcher groups
-          for (var g in allGroups) {
-            if (g.isResearcher) {
-              researchers.add(g);
-            } else {
-              participants.add(g);
-            }
-          }
+      // Differentiate between participant groups and researcher groups
+      for (var g in allGroups) {
+        if (g.isResearcher) {
+          researchers.add(g);
+        } else {
+          participants.add(g);
+        }
+      }
 
-          researcherGroups.value = researchers;
-          participantGroups.value = participants;
-        },
-        onFailure: (ApiError e) => errorMessage.value = e.message);
+      researcherGroups.value = researchers;
+      participantGroups.value = participants;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+    });
 
     // Handle collector result
-    collectorRes.fold(
-        onSuccess: (collectors) {
-          participantCollectors.value = collectors;
-        },
-        onFailure: (ApiError e) => errorMessage.value = e.message);
+    collectorRes.fold(onSuccess: (collectors) {
+      participantCollectors.value = collectors;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+    });
 
     isInitialized.value = true;
   }
@@ -118,7 +116,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
   }
 
   /// Looks up a research group
-  Future<ResearchGroup?> lookupGroup(String code) async {
+  Future<ResearchStudy?> lookupGroup(String code) async {
     final res = await _rgRepo.lookupByCode(code);
 
     return res.fold(onSuccess: (group) {
@@ -132,7 +130,7 @@ class ResearchGroupDashboardViewModel extends ChangeNotifier {
 
   /// Joins the user to a research group
   Future<bool> joinGroup(String code) async {
-    final res = await _rgMembershipRepo.joinByCode(code);
+    final res = await _rgRepo.joinByCode(code);
     return res.fold(onSuccess: (_) {
       if (_lookupGroup == null) {
         _logger.severe(
