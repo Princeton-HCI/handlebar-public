@@ -419,7 +419,6 @@ class _StudyScreenState extends State<StudyScreen> {
                       Spacing.vSpace16,
                       HandlebarButton.primary(
                         label: 'View Data Collected',
-                        // TODO: Update with the actual data feed route
                         onPressed: () =>
                             context.push('/studies/${vm.studyCode}/data'),
                       ),

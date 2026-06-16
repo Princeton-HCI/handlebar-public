@@ -10,9 +10,18 @@ import '../../../../researcher/presentation/widgets/crepe_event_values_list.dart
 class CrepeEventTile extends StatelessWidget {
   final CrepeEvent event;
   final bool fromDashboard;
+  /// When true, shows a one-line preview of captured text under the field name.
+  final bool showCapturedPreview;
+  /// Outer card margin; defaults to horizontal inset for list screens.
+  final EdgeInsetsGeometry? margin;
 
-  const CrepeEventTile(
-      {super.key, required this.event, required this.fromDashboard});
+  const CrepeEventTile({
+    super.key,
+    required this.event,
+    required this.fromDashboard,
+    this.showCapturedPreview = false,
+    this.margin,
+  });
 
   static const _borderWidth = 1.4;
   static const _borderRadius = 12.0;
@@ -79,8 +88,9 @@ class CrepeEventTile extends StatelessWidget {
         "Collected on ${DateFormat.yMMMd().add_jm().format(event.collectedAt.toLocal())}";
 
     return Card(
-        margin: const EdgeInsets.symmetric(
-            horizontal: Spacing.token16, vertical: 4),
+        margin: margin ??
+            const EdgeInsets.symmetric(
+                horizontal: Spacing.token16, vertical: 4),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_borderRadius),
@@ -114,13 +124,25 @@ class CrepeEventTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Datafield name
-                      Text("Datafield: ${event.dataFieldName}",
+                      Text("${event.dataFieldName}",
                           style: context.labelLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: scheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
+
+                      if (showCapturedPreview) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          event.capturedValues.displaySummary,
+                          style: context.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
 
                       if (fromDashboard) ...[
                         // If displaying from dashboard display which research group
@@ -153,12 +175,14 @@ class CrepeEventTile extends StatelessWidget {
                           Icon(Icons.access_time,
                               size: 14, color: scheme.onSurfaceVariant),
                           const SizedBox(width: 4),
-                          Text(
-                            dateGroupStr,
-                            style: context.bodySmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          Expanded(
+                            child: Text(
+                              dateGroupStr,
+                              style: context.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       )

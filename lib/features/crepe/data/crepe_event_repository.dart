@@ -125,7 +125,7 @@ class CrepeEventRepository {
       }
 
       final res = await _api.post(
-        '$_base/memberships/${event.membershipId}/crepe-events',
+        '$_base/crepe-event',
         body: {'crepe_event': event.toJson()},
       );
 

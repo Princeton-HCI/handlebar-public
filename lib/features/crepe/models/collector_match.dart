@@ -58,10 +58,12 @@ class CollectorMatch {
 
   Map<String, dynamic> toContentJson() {
     return {
-      'values': values,
+      'values': values.toJson(),
       'matchedNodes': matchedNodes,
       'dataFieldName': dataFieldName,
       'matchedAt': matchedAt.toIso8601String(),
     };
   }
+
+  bool get hasValidIds => dataFieldId > 0 && membershipId > 0;
 }

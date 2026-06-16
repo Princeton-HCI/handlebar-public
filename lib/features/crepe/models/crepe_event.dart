@@ -66,7 +66,11 @@ class CrepeEvent {
 
   CrepeEventValues get capturedValues {
     final contentJson = parsedContent;
-    return CrepeEventValues.fromJson(contentJson['values']);
+    final raw = contentJson['values'];
+    if (raw is Map) {
+      return CrepeEventValues.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return const CrepeEventValues();
   }
 
   @override

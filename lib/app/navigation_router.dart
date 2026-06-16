@@ -4,7 +4,9 @@ import 'package:handlebar/features/researcher/presentation/view_models/collector
 import 'package:handlebar/features/researcher/presentation/views/create_collector_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:handlebar/features/study/presentation/views/study_collected_data_screen.dart';
 import 'package:handlebar/features/study/presentation/views/study_screen.dart';
+import 'package:handlebar/features/study/presentation/view_models/study_collected_data_view_model.dart';
 import 'package:handlebar/features/terms/presentation/views/terms_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -199,38 +201,53 @@ final GoRouter navigationRouter = GoRouter(
                   dispose: (_, vm) => vm.dispose(),
                   child: const CreateStudyScreen(),
                 )),
-        // Detail Routes (Sub-routes of /studies)
         GoRoute(
-            path: '/studies/:code',
-            builder: (context, state) {
-              final studyCode = state.pathParameters['code']!;
+          path: '/studies/:code',
+          builder: (context, state) {
+            final studyCode = state.pathParameters['code']!;
 
-              return Provider(
-                create: (_) => StudyViewModel(
-                  studyCode: studyCode,
-                ),
-                dispose: (_, vm) => vm.dispose(),
-                child: const StudyScreen(),
-              );
-            }),
-        GoRoute(
-            path: '/studies/:code/define-collector',
-            redirect: (context, state) {
-              if (kIsWeb) {
-                final code = state.pathParameters['code'];
-                return '/studies/$code';
-              }
-              return null;
-            },
-            builder: (context, state) {
-              final studyCode = state.pathParameters['code']!;
+            return Provider(
+              create: (_) => StudyViewModel(studyCode: studyCode),
+              dispose: (_, vm) => vm.dispose(),
+              child: const StudyScreen(),
+            );
+          },
+          routes: [
+            GoRoute(
+              path: 'data',
+              builder: (context, state) {
+                final studyCode = state.pathParameters['code']!;
 
-              return Provider(
-                create: (_) => CollectorCreationViewModel(studyCode: studyCode),
-                dispose: (_, vm) => vm.dispose(),
-                child: const CreateCollectorPage(),
-              );
-            })
+                return Provider(
+                  create: (_) =>
+                      StudyCollectedDataViewModel(studyCode: studyCode),
+                  dispose: (_, vm) => vm.dispose(),
+                  child: const StudyCollectedDataScreen(),
+                );
+              },
+            ),
+            GoRoute(
+              path: 'define-collector',
+              redirect: (context, state) {
+                if (kIsWeb) {
+                  final code = state.pathParameters['code'];
+                  return '/studies/$code';
+                }
+                return null;
+              },
+              builder: (context, state) {
+                final studyCode = state.pathParameters['code']!;
+
+                return Provider(
+                  create: (_) =>
+                      CollectorCreationViewModel(studyCode: studyCode),
+                  dispose: (_, vm) => vm.dispose(),
+                  child: const CreateCollectorPage(),
+                );
+              },
+            ),
+          ],
+        ),
       ],
     )
   ],

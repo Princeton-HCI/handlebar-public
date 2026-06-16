@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:handlebar/features/crepe/data/crepe_event_repository.dart';
@@ -102,21 +103,30 @@ class CollectorService {
       if (matchResult.hasMatches) {
         log('🎯 [CollectorService] Found ${matchResult.matches.length} continuous matches!');
         for (final match in matchResult.matches) {
-          _sendCrepeEventForMatch(match);
+          if (!match.hasValidIds) {
+            log(
+              '⚠️ [CollectorService] Skipping match with invalid ids '
+              '(dataFieldId=${match.dataFieldId}, membershipId=${match.membershipId}). '
+              'Live test mode does not persist events.',
+            );
+            continue;
+          }
+          unawaited(_sendCrepeEventForMatch(match));
         }
       }
-    } catch (e) {
-      log('❌ [CollectorService] Error handling continuous matches: $e');
+    } catch (e, st) {
+      log('❌ [CollectorService] Error handling continuous matches: $e', stackTrace: st);
     }
   }
 
   Future<void> _sendCrepeEventForMatch(CollectorMatch match) async {
     try {
+      final content = jsonEncode(match.toContentJson());
       final crepeEvent = CrepeEvent(
         dataFieldId: match.dataFieldId,
         membershipId: match.membershipId,
         collectedAt: match.matchedAt,
-        content: jsonEncode(match.toContentJson()),
+        content: content,
       );
 
       final result = await getIt<CrepeEventRepository>().send(crepeEvent);

@@ -31,6 +31,16 @@ class CrepeEventValues {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        if (nodeText != null) 'nodeText': nodeText,
+        if (nodeContentDescription != null)
+          'nodeContentDescription': nodeContentDescription,
+        if (relationText != null) 'relationText': relationText,
+        if (relationContentDescription != null)
+          'relationContentDescription': relationContentDescription,
+        if (relationChildTexts != null) 'relationChildTexts': relationChildTexts,
+      };
+
   bool get isEmpty =>
       nodeText == null &&
       nodeContentDescription == null &&
