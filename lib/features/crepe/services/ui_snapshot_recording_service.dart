@@ -14,6 +14,22 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Snapshot + video payload returned when a live recording ends.
+class RecordingSessionResult {
+  final File? videoFile;
+  final List<Map<String, dynamic>> snapshots;
+  final Map<String, dynamic> metadata;
+
+  const RecordingSessionResult({
+    required this.videoFile,
+    required this.snapshots,
+    required this.metadata,
+  });
+
+  bool get hasSnapshots => snapshots.isNotEmpty;
+  bool get hasVideo => videoFile != null;
+}
+
 class UiSnapshotRecordingService {
   static final UiSnapshotRecordingService _instance =
       UiSnapshotRecordingService._internal();
@@ -126,19 +142,21 @@ class UiSnapshotRecordingService {
     );
   }
 
-  Future<void> stopRecording() async {
+  /// Stops recording. Returns session data for in-app use; also saves to
+  /// Downloads when [persistToDownloads] is true (default).
+  Future<RecordingSessionResult?> stopRecording({
+    bool persistToDownloads = true,
+  }) async {
     _isRecording = false;
 
     await _crepePlugin.stopRecording();
 
-    // Stop all snapshot collection immediately
     _snapshotRecordingTimer?.cancel();
     _snapshotRecordingTimer = null;
 
     _isCapturing = false;
     _recordingEndTime = DateTime.now().millisecondsSinceEpoch;
 
-    // Stop video recording and get path
     String? rawVideoPath;
     if (_isVideoRecording) {
       try {
@@ -151,15 +169,41 @@ class UiSnapshotRecordingService {
     }
 
     _recordingStateController.add(false);
-
     _logger.info('Recording stopped. Captured ${_snapshots.length} snapshots');
 
-    // Save everything if we have snapshots
-    if (_snapshots.isNotEmpty) {
-      await _saveSessionToDownloads(rawVideoPath);
-    } else {
+    if (_snapshots.isEmpty) {
       _logger.warning("No snapshots captured, skipping save.");
+      _notificationService.showError('No UI snapshots captured');
+      return null;
     }
+
+    final metadata = await getSessionMetadata();
+    File? sessionVideoFile;
+    if (rawVideoPath != null) {
+      final rawFile = File(rawVideoPath);
+      if (await rawFile.exists()) {
+        final tempDir = await getTemporaryDirectory();
+        final copyPath =
+            '${tempDir.path}/handlebar_collector_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        sessionVideoFile = await rawFile.copy(copyPath);
+      }
+    }
+
+    if (persistToDownloads) {
+      await _saveSessionToDownloads(rawVideoPath);
+    } else if (rawVideoPath != null) {
+      try {
+        await File(rawVideoPath).delete();
+      } catch (_) {}
+    }
+
+    _notificationService.showSuccess('Recording finished');
+
+    return RecordingSessionResult(
+      videoFile: sessionVideoFile,
+      snapshots: List<Map<String, dynamic>>.from(_snapshots),
+      metadata: metadata,
+    );
   }
 
   Future<void> _captureSnapshot() async {

@@ -43,4 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
- linux/flutter/ephemeral/
+/linux/flutter/ephemeral/
+
+# Local exports and agent scratch (not for version control)
+/tmp/
+.claude/

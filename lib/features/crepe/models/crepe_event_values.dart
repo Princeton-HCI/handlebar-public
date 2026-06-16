@@ -37,4 +37,21 @@ class CrepeEventValues {
       relationText == null &&
       relationContentDescription == null &&
       relationChildTexts == null;
+
+  /// One-line summary of captured text for list review UI.
+  String get displaySummary {
+    final parts = <String>[];
+    void add(String? v) {
+      if (v != null && v.isNotEmpty) parts.add(v);
+    }
+
+    add(nodeText);
+    add(nodeContentDescription);
+    add(relationText);
+    add(relationContentDescription);
+    add(relationChildTexts);
+
+    if (parts.isEmpty) return 'No captured value';
+    return parts.join(' · ');
+  }
 }

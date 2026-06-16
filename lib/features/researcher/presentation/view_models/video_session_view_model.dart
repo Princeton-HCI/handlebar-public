@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/network/api_error.dart';
 import '../../../crepe/data/snapshot_repository.dart';
+import '../../../crepe/services/ui_snapshot_recording_service.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/data_field.dart';
 import '../../data/video_thumbnail_repository.dart';
@@ -166,6 +167,43 @@ class VideoSessionViewModel extends ChangeNotifier {
     } catch (e, st) {
       _logger.severe('Unexpected error while loading session $st', e, st);
       errorMessage.value = 'Something went wrong while loading the video.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Initializes a session from an in-app [UiSnapshotRecordingService] capture.
+  Future<void> initializeFromRecording(RecordingSessionResult result) async {
+    isLoading.value = true;
+    isInitialized.value = false;
+    errorMessage.value = null;
+
+    try {
+      if (!result.hasSnapshots) {
+        errorMessage.value =
+            'No UI snapshots were captured. Open the target app, then try again.';
+        return;
+      }
+      final videoFile = result.videoFile;
+      if (videoFile == null || !await videoFile.exists()) {
+        errorMessage.value =
+            'Screen video was not recorded. Try again or upload files manually.';
+        return;
+      }
+
+      final data = _snapshotRepo.snapshotsFromCapturedSession(
+        rawSnapshots: result.snapshots,
+        metadata: result.metadata,
+      );
+      snapshots = data.snapshots;
+      deviceSize = data.recordingDeviceSize;
+      await _initialize(videoFile);
+    } on SnapshotLoadException catch (e, st) {
+      _logger.severe('Failed to load recorded snapshots: ${e.message}', e, st);
+      errorMessage.value = e.message;
+    } catch (e, st) {
+      _logger.severe('Unexpected error loading recording $st', e, st);
+      errorMessage.value = 'Something went wrong while loading the recording.';
     } finally {
       isLoading.value = false;
     }
@@ -696,11 +734,15 @@ class VideoSessionViewModel extends ChangeNotifier {
   // Collector methods
   // ==============
 
-  /// Returns the graph queries for the [hitEntities] in the context of the [snapshot]
+  /// Returns the graph queries for the [hitEntities] in the context of the [snapshot].
+  ///
+  /// Pass [relationsToExclude] to skip specific relation types during query
+  /// generation (e.g., `['SCREEN_HAS_TEXT']`).
   Future<List<SnapshotEntityQueries>> getQueriesForEntities(
       Snapshot snapshot,
       List<Map<String, dynamic>> hitEntities,
-      String datafieldDescription) async {
+      String datafieldDescription,
+      {List<String>? relationsToExclude}) async {
     isCrepeQueryLoading.value = true;
 
     if (isPlaying.value) {
@@ -714,7 +756,12 @@ class VideoSessionViewModel extends ChangeNotifier {
     try {
       // Use the repo to generate queries
       final resultsById = await _snapshotRepo.getQueriesForEntities(
-          snapshot, hitEntities, datafieldDescription, groupId);
+        snapshot,
+        hitEntities,
+        datafieldDescription,
+        relationsToExclude: relationsToExclude,
+        groupId: groupId,
+      );
 
       // Get the queries from each element
       final list =
@@ -764,6 +811,8 @@ class VideoSessionViewModel extends ChangeNotifier {
     required int snapshotIndex,
     required String description,
     required List<DataField> fields,
+    List<String>? screenLandmarks,
+    String? screenName,
   }) async {
     if (snapshotIndex < 0 || snapshotIndex >= snapshots.length) {
       errorMessage.value = "Invalid snapshot index";
@@ -791,6 +840,8 @@ class VideoSessionViewModel extends ChangeNotifier {
       appPackage: appPackage,
       description: description,
       dataFields: fields,
+      screenLandmarks: screenLandmarks,
+      screenName: screenName,
     );
 
     return res.fold(onSuccess: (newCollector) {

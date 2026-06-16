@@ -14,6 +14,7 @@ class CollectorStepperBreadcrumb extends StatelessWidget {
   static const List<String> stepLabels = [
     'Upload Recording',
     'Select Frame',
+    'Select Landmarks',
     'Select Data Fields',
   ];
 

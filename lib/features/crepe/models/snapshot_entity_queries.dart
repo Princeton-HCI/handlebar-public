@@ -22,10 +22,10 @@ class SnapshotEntityQueries {
 
   /// Builds [SnapshotEntityQueries] from a JSON map exported by the Crepe plugin
   factory SnapshotEntityQueries.fromJson(Map<String, dynamic> json) {
-    final allQueriesList = json['queries'] as List<dynamic>? ?? [];
+    final queriesList = json['queries'] as List<dynamic>? ?? [];
 
     return SnapshotEntityQueries(
-      queries: allQueriesList.map((qs) {
+      queries: queriesList.map((qs) {
         // Coerce received maps into proper types
         final typedMap = Map<String, dynamic>.from(qs as Map);
         typedMap['crepeEventValues'] = typedMap['crepeEventValues'] != null

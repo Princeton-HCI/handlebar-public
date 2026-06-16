@@ -40,7 +40,9 @@ class UploadRecordingStep extends StatelessWidget {
                     isLoading: false,
                     prefixIcon: const Icon(Icons.fiber_manual_record,
                         size: Spacing.token24),
-                    onPressed: isLoading ? null : vm.startNewRecording,
+                    onPressed: isLoading
+                        ? null
+                        : () => vm.startNewRecording(context),
                   ),
                   Spacing.vSpace16,
                   HandlebarOldButton(

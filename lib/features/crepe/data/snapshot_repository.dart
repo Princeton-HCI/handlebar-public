@@ -73,37 +73,68 @@ class SnapshotRepository {
       throw SnapshotLoadException('The selected ZIP file could not be read.');
     }
 
+    _logger.info('Loaded ${rawSnapshots.length} raw snapshots from $zipFile');
+    return buildRecordingData(
+      rawSnapshots: rawSnapshots,
+      deviceSize: deviceSize,
+      recordingStartTimestamp: recordingStartTimestamp,
+    );
+  }
+
+  /// Builds [RecordingData] from in-memory snapshot maps (e.g. after live recording).
+  RecordingData snapshotsFromCapturedSession({
+    required List<Map<String, dynamic>> rawSnapshots,
+    required Map<String, dynamic> metadata,
+  }) {
+    final width = metadata['screenWidth'];
+    final height = metadata['screenHeight'];
+    if (width is! num || height is! num) {
+      throw SnapshotLoadException('Recording metadata is missing screen size.');
+    }
+    return buildRecordingData(
+      rawSnapshots: rawSnapshots,
+      deviceSize: Size(width.toDouble(), height.toDouble()),
+      recordingStartTimestamp: metadata['startTimestamp'] as int?,
+    );
+  }
+
+  /// Sorts raw snapshot JSON and converts to [Snapshot] models.
+  RecordingData buildRecordingData({
+    required List<Map<String, dynamic>> rawSnapshots,
+    required Size deviceSize,
+    int? recordingStartTimestamp,
+  }) {
     if (rawSnapshots.isEmpty) {
       throw SnapshotLoadException(
-        'The selected ZIP does not contain valid snapshot JSON files.',
+        'The recording does not contain valid snapshot data.',
       );
     }
 
-    // Sort and convert to Snapshot models
     rawSnapshots.sort((a, b) =>
         (a['captureTimestamp'] as int).compareTo(b['captureTimestamp'] as int));
-    // Use video start timestamp if available so snapshot videoTimestamps
-    // align with actual video positions. Fall back to first snapshot time
-    // for recordings that don't have this metadata.
     final int startTime = recordingStartTimestamp ??
         rawSnapshots.first['captureTimestamp'] as int;
-    final List<Snapshot> snapshots = rawSnapshots
+    final snapshots = rawSnapshots
         .map((json) => Snapshot.fromJson(json: json, startTimestamp: startTime))
         .toList();
 
-    _logger.info(
-        'Loaded ${snapshots.length} snapshots from $zipFile successfully');
-
+    _logger.info('Built ${snapshots.length} snapshots for session');
     return RecordingData(snapshots, deviceSize);
   }
 
   /// Returns graph queries for a snapshot [entity] in the context of the given
-  /// [snapshot]
+  /// [snapshot].
+  ///
+  /// When [relationsToExclude] is provided, the plugin will skip generating
+  /// queries using those relation types (e.g., `['SCREEN_HAS_TEXT']` to let
+  /// manually-selected landmarks handle screen scoping instead).
   Future<Map<int, SnapshotEntityQueries>> getQueriesForEntities(
-      Snapshot snapshot,
-      List<Map<String, dynamic>> entities,
-      String datafieldDescription,
-      int groupId) async {
+    Snapshot snapshot,
+    List<Map<String, dynamic>> entities,
+    String datafieldDescription, {
+    List<String>? relationsToExclude,
+    required int groupId,
+  }) async {
     final String snapshotJson = jsonEncode(snapshot.toPluginFormat());
 
     // Extract just the IDs to send to the plugin
@@ -114,8 +145,11 @@ class SnapshotRepository {
 
     try {
       // Call plugin
-      final rawResults =
-          await _plugin.generateQueriesForVideo(snapshotJson, entityIds);
+      final rawResults = await _plugin.generateQueriesForVideo(
+        snapshotJson,
+        entityIds,
+        relationsToExclude: relationsToExclude,
+      );
 
       // Convert raw strings to domain object
       final Map<int, SnapshotEntityQueries> baseResults = {};

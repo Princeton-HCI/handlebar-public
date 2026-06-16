@@ -6,6 +6,7 @@ import '../../../../../app/design-system/spacing.dart';
 import '../../../../../core/shared_services/notification_service.dart';
 import '../../../../../core/shared_widgets/buttons/handlebar_button.dart';
 import '../../../../crepe/models/data_field.dart';
+import '../../../../crepe/models/screen_landmark.dart';
 import '../../view_models/collector_creation_view_model.dart';
 import '../../widgets/data_field_editor_sheet.dart';
 import '../../widgets/name_collector_dialog.dart';
@@ -30,6 +31,9 @@ class SelectDataFieldsStep extends StatelessWidget {
     final session = vm.session;
     final snapshot = session.snapshots[session.currSnapshotIndex.value];
 
+    // Exclude SCREEN_HAS_TEXT since landmarks handle screen scoping
+    const relationsToExclude = ['SCREEN_HAS_TEXT'];
+
     final result = await showModalBottomSheet<DataField>(
       context: context,
       isScrollControlled: true,
@@ -42,7 +46,9 @@ class SelectDataFieldsStep extends StatelessWidget {
         session: session,
         snapshot: snapshot,
         hitEntities: hitEntities,
+        sourceSnapshotIndex: session.currSnapshotIndex.value,
         initial: initial,
+        relationsToExclude: relationsToExclude,
       ),
     );
 
@@ -81,8 +87,9 @@ class SelectDataFieldsStep extends StatelessWidget {
     final ok = await vm.createCollector(name);
     if (!context.mounted) return;
     if (ok) {
-      NotificationService().showSuccess('Collector created!');
-      Navigator.of(context).maybePop();
+      NotificationService().showSuccess(
+        'Collector created! Pick a frame to define another collector.',
+      );
     }
   }
 
@@ -135,16 +142,49 @@ class SelectDataFieldsStep extends StatelessWidget {
                                   return const SizedBox.shrink();
                                 }
                                 final snap = session.snapshots[index];
-                                return SnapshotOverlay(
-                                  snapshot: snap,
-                                  videoSize: videoSize,
-                                  containerSize: containerSize,
-                                  originalDeviceSize: session.deviceSize,
-                                  onIntersectTap: (hits) => _openEditor(
-                                    context,
-                                    vm: vm,
-                                    hitEntities: hits,
-                                  ),
+                                return ValueListenableBuilder<
+                                    List<DataField>>(
+                                  valueListenable: vm.selectedFields,
+                                  builder: (context, fields, _) {
+                                    return ValueListenableBuilder<
+                                        List<ScreenLandmark>>(
+                                      valueListenable: vm.screenLandmarks,
+                                      builder: (context, landmarks, _) {
+                                        final markers =
+                                            <int, SelectedFieldMarker>{};
+                                        for (var i = 0;
+                                            i < fields.length;
+                                            i++) {
+                                          final f = fields[i];
+                                          if (f.sourceSnapshotIndex ==
+                                                  index &&
+                                              f.sourceEntityId != null) {
+                                            markers[f.sourceEntityId!] =
+                                                SelectedFieldMarker(
+                                              badgeNumber: i + 1,
+                                            );
+                                          }
+                                        }
+                                        return SnapshotOverlay(
+                                          snapshot: snap,
+                                          videoSize: videoSize,
+                                          containerSize: containerSize,
+                                          originalDeviceSize:
+                                              session.deviceSize,
+                                          landmarkEntityIds: landmarks
+                                              .map((l) => l.entityId)
+                                              .toSet(),
+                                          selectedFieldMarkers: markers,
+                                          onIntersectTap: (hits) =>
+                                              _openEditor(
+                                            context,
+                                            vm: vm,
+                                            hitEntities: hits,
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
                                 );
                               },
                             ),
@@ -154,6 +194,16 @@ class SelectDataFieldsStep extends StatelessWidget {
                     },
                   ),
                 ),
+              ),
+              Spacing.vSpace8,
+              Text(
+                'Green numbered boxes are selected fields.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant,
+                    ),
               ),
               Spacing.vSpace8,
 

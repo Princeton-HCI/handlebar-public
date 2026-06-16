@@ -42,14 +42,13 @@ class Snapshot {
   /// Builds a [Snapshot] from a JSON map exported by the Crepe plugin
   factory Snapshot.fromJson(
       {required Map<String, dynamic> json, required int startTimestamp}) {
-    // Get all the raw data from the JSON
     final int originalTimestamp = json['captureTimestamp'] as int;
     final Map<String, dynamic> metadata =
-        Map<String, dynamic>.from(json['metadata'] ?? {});
+        Map<String, dynamic>.from(json['metadata'] as Map? ?? {});
     final List<Map<String, dynamic>> allEntities =
-        List<Map<String, dynamic>>.from(json['entities'] ?? []);
+        _coerceEntityList(json['entities']);
     final List<Map<String, dynamic>> triples =
-        List<Map<String, dynamic>>.from(json['triples'] ?? []);
+        _coerceTripleList(json['triples']);
 
     final Map<int, Map<String, dynamic>> nodeEntitiesMap = {};
     final Map<int, Rect> boundingBoxesMap = {};
@@ -92,6 +91,26 @@ class Snapshot {
         triples: triples,
         boundingBoxes: boundingBoxesMap,
         zIndexSequences: zIndexSequencesMap);
+  }
+
+  /// Method-channel snapshots use [Map<Object?, Object?>] nested maps.
+  static List<Map<String, dynamic>> _coerceEntityList(dynamic raw) {
+    if (raw is! List) return [];
+    return raw.map(_coerceEntityMap).toList();
+  }
+
+  static Map<String, dynamic> _coerceEntityMap(dynamic raw) {
+    final map = Map<String, dynamic>.from(raw as Map);
+    final value = map['value'];
+    if (value is Map) {
+      map['value'] = Map<String, dynamic>.from(value);
+    }
+    return map;
+  }
+
+  static List<Map<String, dynamic>> _coerceTripleList(dynamic raw) {
+    if (raw is! List) return [];
+    return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   /// Converts the Snapshot back into a JSON-compatible map for the Crepe plugin

@@ -75,16 +75,43 @@ class SelectedFieldsPanel extends StatelessWidget {
             ...fields.asMap().entries.map((e) {
               final i = e.key;
               final f = e.value;
+              final onThisSnapshot = f.sourceSnapshotIndex == currentSnapshot;
+              final badgeNumber = i + 1;
+              final subtitleLines = <String>[
+                if (f.capturedValues != null && !f.capturedValues!.isEmpty)
+                  f.capturedValues!.displaySummary,
+                if (!onThisSnapshot)
+                  'From snapshot ${(f.sourceSnapshotIndex ?? 0) + 1}',
+              ];
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
                   color: scheme.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.outlineVariant),
+                  border: Border.all(
+                    color: onThisSnapshot
+                        ? Colors.green.shade700
+                        : scheme.outlineVariant,
+                    width: onThisSnapshot ? 1.5 : 1,
+                  ),
                 ),
                 child: ListTile(
                   dense: true,
+                  leading: _FieldBadge(
+                    number: badgeNumber,
+                    highlighted: onThisSnapshot,
+                  ),
                   title: Text(f.name),
+                  subtitle: subtitleLines.isEmpty
+                      ? null
+                      : Text(
+                          subtitleLines.join('\n'),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                   trailing: PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert),
                     onSelected: (v) {
@@ -100,6 +127,33 @@ class SelectedFieldsPanel extends StatelessWidget {
               );
             }),
         ],
+      ),
+    );
+  }
+}
+
+class _FieldBadge extends StatelessWidget {
+  final int number;
+  final bool highlighted;
+
+  const _FieldBadge({
+    required this.number,
+    required this.highlighted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = highlighted ? Colors.green.shade700 : Colors.grey.shade500;
+    return CircleAvatar(
+      radius: 14,
+      backgroundColor: bg,
+      child: Text(
+        '$number',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

@@ -80,6 +80,8 @@ class ResearchGroupCollectorRepository with ApiExecutor {
     required String appPackage,
     required String description,
     required List<DataField> dataFields,
+    List<String>? screenLandmarks,
+    String? screenName,
   }) async {
     final action = 'createCollectorAndAttach($groupId)';
     return executeRequest<Collector>(
@@ -94,6 +96,9 @@ class ResearchGroupCollectorRepository with ApiExecutor {
             'app_name': appName,
             'app_package': appPackage,
             'description': description,
+            if (screenName != null) 'screen_name': screenName,
+            if (screenLandmarks != null && screenLandmarks.isNotEmpty)
+              'screen_landmarks': screenLandmarks,
             'data_fields': dfPayload,
           }
         };

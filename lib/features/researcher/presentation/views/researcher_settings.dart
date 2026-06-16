@@ -15,7 +15,7 @@ import '../../../crepe/models/snapshot_entity_queries.dart';
 import '../view_models/video_session_view_model.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_button.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_icon_button.dart';
-import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
+import '../../../../core/shared_widgets/handlebar_app_bar.dart';
 import '../../../../core/shared_widgets/buttons/handlebar_segment_group.dart';
 import '../../../../core/shared_widgets/scaffolds/static_responsive_scaffold.dart';
 import '../widgets/select_query_bottom_sheet.dart';
@@ -161,7 +161,7 @@ class _ResearcherSettingsState extends State<ResearcherSettings> {
     return Stack(
       children: [
         StaticResponsiveScaffold(
-          appBar: HandlebarOldAppBar(
+          appBar: HandlebarAppBar(
             title: "Researcher Settings",
             onReturn: () => context.pop(),
           ),

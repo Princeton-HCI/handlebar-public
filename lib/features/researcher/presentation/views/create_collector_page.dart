@@ -8,6 +8,7 @@ import '../view_models/collector_creation_view_model.dart';
 import '../widgets/collector_stepper_breadcrumb.dart';
 import 'steps/select_data_fields_step.dart';
 import 'steps/select_frame_step.dart';
+import 'steps/select_landmarks_step.dart';
 import 'steps/upload_recording_step.dart';
 
 /// Top-level page for the 3-step collector creation flow.
@@ -131,6 +132,8 @@ class _CreateCollectorPageState extends State<CreateCollectorPage> {
                     case 1:
                       return const SelectFrameStep();
                     case 2:
+                      return const SelectLandmarksStep();
+                    case 3:
                       return const SelectDataFieldsStep();
                     default:
                       return const SizedBox.shrink();
