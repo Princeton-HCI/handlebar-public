@@ -17,21 +17,18 @@ import 'package:handlebar/features/crepe/utils/query_describer.dart';
 
 // -- Realistic query strings --------------------------------------------------
 
-const _dualAnchorSpatial =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _dualAnchorSpatial = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(exists numeric_price) '
     '(RIGHT (conj (hasText "Guaranteed incl. tips") (HAS_PACKAGE_NAME "com.doordash.driverapp") ) ) '
     '(BELOW (conj (hasText "3.2 mi") (HAS_PACKAGE_NAME "com.doordash.driverapp") ) ) )';
 
-const _singleAnchorSpatial =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _singleAnchorSpatial = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(exists numeric_price) '
     '(RIGHT (conj (hasText "Guaranteed incl. tips") (HAS_PACKAGE_NAME "com.doordash.driverapp") ) ) )';
 
-const _bareSemantic =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _bareSemantic = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(exists numeric_price) )';
 
@@ -40,8 +37,7 @@ const _bareSemanticDistance =
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(exists numeric_length) )';
 
-const _exactTextDynamic =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _exactTextDynamic = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(hasText "\$6.35") )';
 
@@ -50,39 +46,32 @@ const _exactTextDynamicDistance =
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(hasText "3.2 mi") )';
 
-const _staticText =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _staticText = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(hasText "Guaranteed incl. tips") )';
 
-const _screenHasText =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _screenHasText = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(SCREEN_HAS_TEXT "Guaranteed incl. tips") '
     '(exists numeric_price) )';
 
-const _screenLocation =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _screenLocation = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_SCREEN_LOCATION "[100,200][300,400]") )';
 
-const _parentLocation =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _parentLocation = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PARENT_LOCATION "[100,200][300,400]") )';
 
-const _spatialAbove =
-    '(conj (HAS_CLASS_NAME "android.widget.TextView") '
+const _spatialAbove = '(conj (HAS_CLASS_NAME "android.widget.TextView") '
     '(HAS_PACKAGE_NAME "com.doordash.driverapp") '
     '(exists numeric_length) '
     '(ABOVE (conj (hasText "Deliver by") (HAS_PACKAGE_NAME "com.doordash.driverapp") ) ) )';
 
-const _ancestorChildTextAnchor =
-    '(conj (exists numeric_duration) '
+const _ancestorChildTextAnchor = '(conj (exists numeric_duration) '
     '(HAS_PARENT (conj (HAS_CHILD_TEXT "Avg. wait")) ) '
     '(HAS_PACKAGE_NAME com.doordash.driverapp) '
     '(HAS_CLASS_NAME android.widget.TextView))';
 
-const _viewId =
-    '(conj (HAS_CLASS_NAME "android.widget.EditText") '
+const _viewId = '(conj (HAS_CLASS_NAME "android.widget.EditText") '
     '(HAS_VIEW_ID "com.app:id/email_input") )';
 
 void main() {
@@ -165,8 +154,7 @@ void main() {
 
     test('score 0.3 is not dynamic text', () {
       expect(
-        QueryDescriber.isExactTextOnDynamicContent(
-            _singleAnchorSpatial, 0.3),
+        QueryDescriber.isExactTextOnDynamicContent(_singleAnchorSpatial, 0.3),
         isFalse,
       );
     });
@@ -354,8 +342,7 @@ void main() {
       );
       expect(
         partition.excluded.any(
-          (e) =>
-              e.reason == QueryExclusionReason.fragileDynamicText,
+          (e) => e.reason == QueryExclusionReason.fragileDynamicText,
         ),
         isTrue,
       );

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:handlebar/features/crepe/services/collector_service.dart';
 import 'package:handlebar/features/home/presentation/view_models/participant_home_view_model.dart';
+import 'package:handlebar/features/settings/presentation/view_models/participant_settings_view_model.dart';
 
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_membership_repository.dart';
@@ -105,4 +106,9 @@ void setupLocator() {
   getIt.registerFactory(() => CreateStudyViewModel(rgRepo: getIt()));
 
   getIt.registerFactory(() => ParticipantHomeViewModel(rgRepo: getIt()));
+
+  getIt.registerFactory(() => ParticipantSettingsViewModel(
+        getIt<SecureStorage>(),
+        getIt<CrepeService>(),
+      ));
 }

@@ -8,8 +8,7 @@ class ScreenLandmark {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ScreenLandmark && other.text == text;
+      identical(this, other) || other is ScreenLandmark && other.text == text;
 
   @override
   int get hashCode => text.hashCode;

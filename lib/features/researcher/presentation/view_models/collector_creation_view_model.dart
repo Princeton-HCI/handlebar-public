@@ -38,8 +38,10 @@ class CollectorCreationViewModel {
   // ---- Stepper State ----
   static const int totalSteps = 4;
   final ValueNotifier<int> currentStep = ValueNotifier(0);
+
   /// Researcher-provided name for the screen this collector targets.
   final ValueNotifier<String> screenName = ValueNotifier('');
+
   /// Screen landmarks selected by the researcher. Each landmark's text will
   /// be injected as a `SCREEN_HAS_TEXT` clause into every data field query
   /// when the collector is created.
@@ -114,7 +116,10 @@ class CollectorCreationViewModel {
   /// Creates the collector via the underlying session VM, using the currently
   /// viewed snapshot for app metadata. Wraps each field's query with any
   /// selected screen landmarks before sending.
-  Future<bool> createCollector(String name) async {
+  Future<bool> createCollector(
+    String name, {
+    int collectionIntervalSeconds = 0,
+  }) async {
     final landmarks = screenLandmarks.value;
     final fields = selectedFields.value
         .map((f) => f.copyWith(
@@ -128,6 +133,7 @@ class CollectorCreationViewModel {
       fields: fields,
       screenLandmarks: landmarks.map((l) => l.text).toList(),
       screenName: screenName.value.isNotEmpty ? screenName.value : null,
+      collectionIntervalSeconds: collectionIntervalSeconds,
     );
     if (ok) {
       resetForAnotherCollector();
@@ -151,8 +157,7 @@ class CollectorCreationViewModel {
   ) {
     if (landmarks.isEmpty) return query;
     final clauses = landmarks
-        .map((l) =>
-            '(SCREEN_HAS_TEXT "${l.text.replaceAll('"', '\\"')}")')
+        .map((l) => '(SCREEN_HAS_TEXT "${l.text.replaceAll('"', '\\"')}")')
         .join(' ');
     final trimmed = query.trim();
     if (trimmed.startsWith('(conj ')) {

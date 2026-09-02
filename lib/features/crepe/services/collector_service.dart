@@ -10,6 +10,7 @@ import 'package:handlebar/features/research_group/data/research_group_collector_
 import '../../../app/app_locator.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/storage/auth_token_store.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../models/crepe_event.dart';
 import 'crepe_service.dart';
 
@@ -89,6 +90,10 @@ class CollectorService {
         final collectorsJson = jsonEncode(pluginData);
         await _crepeService.setContinuousMonitoring(true,
             collectorsJson: collectorsJson);
+        // Re-apply the participant's overlay preference each time monitoring
+        // starts, so it survives accessibility-service restarts.
+        await _crepeService
+            .setOverlayEnabled(SecureStorage().showCollectorOverlays);
         log('🟢 [CollectorService] Continuous monitoring ENABLED');
       } catch (e) {
         log('❌ [CollectorService] Failed to enable continuous monitoring: $e');
@@ -115,7 +120,8 @@ class CollectorService {
         }
       }
     } catch (e, st) {
-      log('❌ [CollectorService] Error handling continuous matches: $e', stackTrace: st);
+      log('❌ [CollectorService] Error handling continuous matches: $e',
+          stackTrace: st);
     }
   }
 

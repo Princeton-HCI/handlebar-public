@@ -47,8 +47,7 @@ class CollectorStepperBreadcrumb extends StatelessWidget {
             ),
             if (i < stepLabels.length - 1)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: Spacing.token8),
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.token8),
                 child: Icon(
                   Icons.chevron_right,
                   size: Spacing.token16,
@@ -104,8 +103,8 @@ class _StepLabel extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(Spacing.token8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.token8, vertical: 4),
+        padding:
+            const EdgeInsets.symmetric(horizontal: Spacing.token8, vertical: 4),
         child: text,
       ),
     );

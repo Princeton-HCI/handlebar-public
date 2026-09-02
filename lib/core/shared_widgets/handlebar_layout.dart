@@ -130,6 +130,12 @@ class _Sidebar extends StatelessWidget {
               ),
               Spacing.vSpace8,
               _SidebarItem(
+                label: 'Settings',
+                route: '/settings',
+                currentPath: currentPath,
+              ),
+              Spacing.vSpace8,
+              _SidebarItem(
                 label: 'Accessibility Service',
                 route: '/accessibility',
                 currentPath: currentPath,

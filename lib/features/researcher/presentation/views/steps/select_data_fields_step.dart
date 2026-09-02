@@ -79,12 +79,15 @@ class SelectDataFieldsStep extends StatelessWidget {
 
   Future<void> _createCollector(
       BuildContext context, CollectorCreationViewModel vm) async {
-    final name = await showDialog<String>(
+    final result = await showDialog<CollectorNamingResult>(
       context: context,
       builder: (_) => const NameCollectorDialog(),
     );
-    if (name == null || name.isEmpty) return;
-    final ok = await vm.createCollector(name);
+    if (result == null || result.name.isEmpty) return;
+    final ok = await vm.createCollector(
+      result.name,
+      collectionIntervalSeconds: result.collectionIntervalSeconds,
+    );
     if (!context.mounted) return;
     if (ok) {
       NotificationService().showSuccess(
@@ -142,8 +145,7 @@ class SelectDataFieldsStep extends StatelessWidget {
                                   return const SizedBox.shrink();
                                 }
                                 final snap = session.snapshots[index];
-                                return ValueListenableBuilder<
-                                    List<DataField>>(
+                                return ValueListenableBuilder<List<DataField>>(
                                   valueListenable: vm.selectedFields,
                                   builder: (context, fields, _) {
                                     return ValueListenableBuilder<
@@ -156,8 +158,7 @@ class SelectDataFieldsStep extends StatelessWidget {
                                             i < fields.length;
                                             i++) {
                                           final f = fields[i];
-                                          if (f.sourceSnapshotIndex ==
-                                                  index &&
+                                          if (f.sourceSnapshotIndex == index &&
                                               f.sourceEntityId != null) {
                                             markers[f.sourceEntityId!] =
                                                 SelectedFieldMarker(
@@ -175,8 +176,7 @@ class SelectDataFieldsStep extends StatelessWidget {
                                               .map((l) => l.entityId)
                                               .toSet(),
                                           selectedFieldMarkers: markers,
-                                          onIntersectTap: (hits) =>
-                                              _openEditor(
+                                          onIntersectTap: (hits) => _openEditor(
                                             context,
                                             vm: vm,
                                             hitEntities: hits,
@@ -200,9 +200,7 @@ class SelectDataFieldsStep extends StatelessWidget {
                 'Green numbered boxes are selected fields.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
               Spacing.vSpace8,

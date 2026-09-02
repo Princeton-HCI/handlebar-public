@@ -98,7 +98,8 @@ class QueryDescriber {
   /// Parent/child text anchors (e.g. `HAS_CHILD_TEXT "Avg. wait"`) — not
   /// "bare" semantic; these tie the field to a stable label on screen.
   static bool _hasStaticLabelAnchor(String query) {
-    return query.contains('HAS_CHILD_TEXT') || query.contains('HAS_PARENT_TEXT');
+    return query.contains('HAS_CHILD_TEXT') ||
+        query.contains('HAS_PARENT_TEXT');
   }
 
   /// Short explanation shown on not-recommended query cards.
@@ -146,8 +147,7 @@ class QueryDescriber {
       }
     }
 
-    final hasSpatial =
-        suggested.any((q) => _hasSpatialAnchor(getQuery(q)));
+    final hasSpatial = suggested.any((q) => _hasSpatialAnchor(getQuery(q)));
 
     if (hasSpatial) {
       final stillSuggested = <T>[];

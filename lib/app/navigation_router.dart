@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:handlebar/features/crepe/presentation/views/accessibility_screen.dart';
+import 'package:handlebar/features/settings/presentation/view_models/participant_settings_view_model.dart';
+import 'package:handlebar/features/settings/presentation/views/participant_settings_screen.dart';
 import 'package:handlebar/features/researcher/presentation/view_models/collector_creation_view_model.dart';
 import 'package:handlebar/features/researcher/presentation/views/create_collector_page.dart';
 import 'package:flutter/material.dart';
@@ -182,6 +184,14 @@ final GoRouter navigationRouter = GoRouter(
             create: (_) => getIt<AccessibilityViewModel>(),
             dispose: (_, vm) => vm.dispose(),
             child: const AccessibilityScreen(isMandatory: true),
+          ),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => Provider(
+            create: (_) => getIt<ParticipantSettingsViewModel>(),
+            dispose: (_, vm) => vm.dispose(),
+            child: const ParticipantSettingsScreen(),
           ),
         ),
         GoRoute(

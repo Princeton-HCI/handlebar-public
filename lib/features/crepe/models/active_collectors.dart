@@ -29,6 +29,7 @@ class ActiveCollectors {
         'membership_id': membershipId,
         'collectorStatus': 'active',
         'description': c.description,
+        'collectionIntervalSeconds': c.collectionIntervalSeconds ?? 0,
         'collectorStartTime': 0,
         'collectorEndTime': 0,
         'collectorStartTimeString': '',

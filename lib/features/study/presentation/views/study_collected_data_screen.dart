@@ -116,16 +116,17 @@ class _StudyCollectedDataScreenState extends State<StudyCollectedDataScreen> {
                                   event: events[index],
                                   fromDashboard: false,
                                   showCapturedPreview: true,
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                 );
                               },
                             ),
                     ),
                   );
-              },
-            );
-          },
-        ),
+                },
+              );
+            },
+          ),
         ],
       ),
     );

@@ -34,7 +34,9 @@ class AvailableCollectors extends StatelessWidget {
               final collector = collectors[index];
 
               return ListTile(
-                title: Text(collector.description ?? "No Description"),
+                title: Text(collector.description.isEmpty
+                    ? "No Description"
+                    : collector.description),
                 trailing: Switch(
                   value: debugToggleValue,
                   onChanged: (val) => onToggle(collector, val),

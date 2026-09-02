@@ -136,7 +136,8 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
 
     // Debug: log raw queries before filtering
     for (final group in groups) {
-      debugPrint('--- Raw queries from plugin (${group.queries.length} total, best=${group.bestQueryIndex}) ---');
+      debugPrint(
+          '--- Raw queries from plugin (${group.queries.length} total, best=${group.bestQueryIndex}) ---');
       for (var i = 0; i < group.queries.length; i++) {
         final q = group.queries[i];
         debugPrint('  [$i] score=${q.score} query=${q.query}');
@@ -420,8 +421,7 @@ class _DataFieldEditorSheetState extends State<DataFieldEditorSheet> {
         isBest: false,
         isSelected: _selectedQuery == q.query,
         notRecommended: true,
-        exclusionReason:
-            QueryDescriber.exclusionReasonLabel(entry.reason),
+        exclusionReason: QueryDescriber.exclusionReasonLabel(entry.reason),
         valuesChild: CrepeEventValuesList(values: q.crepeEventValues),
         onSelected: () => setState(() => _selectedQuery = q.query),
       ));
@@ -457,9 +457,8 @@ class _QueryCard extends StatelessWidget {
     final muted = notRecommended;
     return Card(
       elevation: isSelected ? 3 : 1,
-      color: muted
-          ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
-          : null,
+      color:
+          muted ? scheme.surfaceContainerHighest.withValues(alpha: 0.35) : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -487,9 +486,7 @@ class _QueryCard extends StatelessWidget {
                           description,
                           style: context.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: muted
-                                ? scheme.onSurfaceVariant
-                                : null,
+                            color: muted ? scheme.onSurfaceVariant : null,
                           ),
                         ),
                         if (exclusionReason != null) ...[

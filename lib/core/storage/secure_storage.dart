@@ -15,6 +15,10 @@ class SecureStorage {
   // NEW: RAM cache for terms
   bool termsAccepted = false;
 
+  // Participant preference: show on-screen highlight cards during collection.
+  // Defaults to true (overlays shown) when unset.
+  bool showCollectorOverlays = true;
+
   // Singleton instance
   static final SecureStorage _secureStorage = SecureStorage._internal();
   final storage = const FlutterSecureStorage();
@@ -38,6 +42,10 @@ class SecureStorage {
     // READ TERMS ON BOOT
     final termsStr = await storage.read(key: "handlebar_terms_accepted");
     termsAccepted = (termsStr == 'true');
+
+    // Overlay preference defaults to ON unless explicitly disabled.
+    final overlayStr = await storage.read(key: "handlebar_show_overlays");
+    showCollectorOverlays = (overlayStr != 'false');
 
     String tokenExpiresDate =
         await storage.read(key: "handlebar_token_expires") ?? "";
@@ -93,6 +101,13 @@ class SecureStorage {
       await storage.write(key: 'handlebar_email', value: newEmail);
     }
     await storage.write(key: 'handlebar_role', value: newRole);
+  }
+
+  /// Persists the participant's overlay-visibility preference.
+  Future<void> saveShowCollectorOverlays(bool show) async {
+    showCollectorOverlays = show;
+    await storage.write(
+        key: 'handlebar_show_overlays', value: show ? 'true' : 'false');
   }
 
   /// Caches the terms acceptance

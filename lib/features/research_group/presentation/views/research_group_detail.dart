@@ -9,12 +9,14 @@ import '../../../../core/shared_widgets/handlebar_old_app_bar.dart';
 import '../../../../core/shared_widgets/scaffolds/dynamic_responsive_scaffold.dart';
 import '../../../crepe/models/collector.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../../crepe/utils/collector_grouping.dart';
 import '../../../study/data/models/research_study.dart';
 import '../../../study/data/models/research_study_member.dart';
 import '../view_models/research_group_detail_view_model.dart';
 import '../widgets/bottom-sheets/member_detail_bottom_sheet.dart';
 import '../widgets/dialogs/add_researcher_dialog.dart';
 import '../widgets/dialogs/delete_collector_dialog.dart';
+import '../widgets/dialogs/edit_collector_dialog.dart';
 import '../widgets/dialogs/edit_group_dialog.dart';
 import '../widgets/dialogs/kick_member_dialog.dart';
 import '../widgets/dialogs/my_membership_dialog.dart';
@@ -121,6 +123,27 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
     );
   }
 
+  Future<void> _showEditCollectorDialog(Collector collector) async {
+    final result = await showDialog<EditCollectorResult>(
+      context: context,
+      builder: (context) => EditCollectorDialog(collector: collector),
+    );
+    if (result == null) return;
+
+    final ok = await vm.updateCollector(
+      collector.collectorId,
+      description: result.description,
+      collectionIntervalSeconds: result.collectionIntervalSeconds,
+    );
+    if (!mounted) return;
+    if (ok) {
+      NotificationService().showSuccess('Collector updated');
+    } else {
+      NotificationService()
+          .showError(vm.errorMessage.value ?? 'Failed to update collector');
+    }
+  }
+
   /// Count participants (non-researcher members) from the member list
   int _getParticipantCount() {
     return vm.members.value
@@ -194,17 +217,64 @@ class _ResearchGroupDetailState extends State<ResearchGroupDetail> {
           );
         }
 
+        // Flatten the app groups into a single row list so the section can
+        // stay a single SliverList: each row is either an app header or a tile.
+        final groups = groupCollectorsByApp(collectors);
+        final rows = <Widget>[];
+        for (final group in groups) {
+          rows.add(_buildAppHeader(group));
+          for (final c in group.collectors) {
+            rows.add(CollectorTile(
+              collector: c,
+              onEdit:
+                  vm.isResearcher ? () => _showEditCollectorDialog(c) : null,
+              onDelete: vm.isResearcher
+                  ? () => _showDeleteCollectorDialog(c.collectorId)
+                  : null,
+            ));
+          }
+        }
+
         return SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-          final c = collectors[index];
-          return CollectorTile(
-            collector: c,
-            onDelete: vm.isResearcher
-                ? () => _showDeleteCollectorDialog(c.collectorId)
-                : null,
-          );
-        }, childCount: collectors.length));
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => rows[index],
+            childCount: rows.length,
+          ),
+        );
       },
+    );
+  }
+
+  Widget _buildAppHeader(CollectorAppGroup group) {
+    final scheme = Theme.of(context).colorScheme;
+    final count = group.collectors.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Spacing.token16, Spacing.token16, Spacing.token16, Spacing.token8),
+      child: Row(
+        children: [
+          Icon(Icons.android, size: Spacing.token16, color: scheme.primary),
+          Spacing.hSpace8,
+          Expanded(
+            child: Text(
+              group.appName,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            count == 1 ? '1 collector' : '$count collectors',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 

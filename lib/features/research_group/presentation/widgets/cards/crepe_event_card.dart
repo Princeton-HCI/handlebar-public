@@ -10,8 +10,10 @@ import '../../../../researcher/presentation/widgets/crepe_event_values_list.dart
 class CrepeEventTile extends StatelessWidget {
   final CrepeEvent event;
   final bool fromDashboard;
+
   /// When true, shows a one-line preview of captured text under the field name.
   final bool showCapturedPreview;
+
   /// Outer card margin; defaults to horizontal inset for list screens.
   final EdgeInsetsGeometry? margin;
 

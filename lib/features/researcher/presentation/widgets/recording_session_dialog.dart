@@ -84,8 +84,8 @@ class _RecordingSessionDialogState extends State<RecordingSessionDialog> {
                           children: [
                             if (isRecording)
                               Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: Spacing.token16),
+                                padding: const EdgeInsets.only(
+                                    bottom: Spacing.token16),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

@@ -9,12 +9,17 @@ class Collector {
   final String description;
   final List<DataField> dataFields;
 
+  /// Minimum seconds between captures for this collector. `null` or `0` means
+  /// "collect every time it matches" (the default behavior).
+  final int? collectionIntervalSeconds;
+
   Collector({
     required this.collectorId,
     required this.appName,
     required this.appPackage,
     required this.description,
     required this.dataFields,
+    this.collectionIntervalSeconds,
   });
 
   factory Collector.fromJson(Map<String, dynamic> json) {
@@ -23,6 +28,7 @@ class Collector {
       appName: json['app_name'] as String,
       appPackage: json['app_package'] as String,
       description: json['description'] as String,
+      collectionIntervalSeconds: json['collection_interval_seconds'] as int?,
       dataFields: (json['datafields'] as List<dynamic>)
           .map((field) => DataField.fromJson(field))
           .toList(),
@@ -35,13 +41,33 @@ class Collector {
       'appName': appName,
       'appPackage': appPackage,
       'description': description,
+      'collectionIntervalSeconds': collectionIntervalSeconds ?? 0,
       'datafields': dataFields.map((field) => field.toPluginFormat()).toList(),
     };
   }
 
+  Collector copyWith({
+    int? collectorId,
+    String? appName,
+    String? appPackage,
+    String? description,
+    List<DataField>? dataFields,
+    int? collectionIntervalSeconds,
+  }) {
+    return Collector(
+      collectorId: collectorId ?? this.collectorId,
+      appName: appName ?? this.appName,
+      appPackage: appPackage ?? this.appPackage,
+      description: description ?? this.description,
+      dataFields: dataFields ?? this.dataFields,
+      collectionIntervalSeconds:
+          collectionIntervalSeconds ?? this.collectionIntervalSeconds,
+    );
+  }
+
   @override
   String toString() {
-    return 'Collector(collectorId: $collectorId, appName: $appName, appPackage: $appPackage, description: $description, dataFields: $dataFields)';
+    return 'Collector(collectorId: $collectorId, appName: $appName, appPackage: $appPackage, description: $description, collectionIntervalSeconds: $collectionIntervalSeconds, dataFields: $dataFields)';
   }
 
   @override
@@ -52,12 +78,13 @@ class Collector {
         other.appName == appName &&
         other.appPackage == appPackage &&
         other.description == description &&
+        other.collectionIntervalSeconds == collectionIntervalSeconds &&
         other.dataFields == dataFields;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-        collectorId, appName, appPackage, description, dataFields);
+    return Object.hash(collectorId, appName, appPackage, description,
+        collectionIntervalSeconds, dataFields);
   }
 }

@@ -58,6 +58,16 @@ class CrepeService {
     return _plugin.isContinuousMonitoringEnabled();
   }
 
+  /// Toggle the on-screen highlight overlay shown when a collector matches.
+  /// Suppresses the visual flash only; capture is unaffected.
+  Future<void> setOverlayEnabled(bool enabled) async {
+    if (kIsWeb) {
+      _logger.info('[WEB STUB] setOverlayEnabled($enabled) ignored');
+      return;
+    }
+    return _plugin.setOverlayEnabled(enabled);
+  }
+
   void setCollectorMatchesCallback(Function(Map<String, dynamic>) callback) {
     if (kIsWeb) {
       _logger.info('[WEB STUB] setCollectorMatchesCallback ignored');

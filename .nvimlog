@@ -1,0 +1,2 @@
+WRN 2026-06-02T10:28:25.899 ?.59506    server_start:163: Failed to start server: address already in use: /tmp/nvimsocket
+WRN 2026-06-02T10:28:25.900 ?.59506    server_start:163: Failed to start server: operation not permitted: /var/folders/4h/b_fk9pns61s_c13y__2x456m0000gn/T/nvim.dcalacci/dxMwti/nvim.59506.0

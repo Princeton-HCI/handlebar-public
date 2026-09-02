@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:handlebar/app/design-system/breakpoints.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
+import 'package:handlebar/features/crepe/utils/collector_grouping.dart';
 import 'package:handlebar/features/study/data/models/research_study.dart';
 import 'package:handlebar/features/study/presentation/view_models/study_view_model.dart';
 import 'package:handlebar/features/study/presentation/widgets/collector_details_bottom_sheet.dart';
@@ -373,27 +374,7 @@ class _StudyScreenState extends State<StudyScreen> {
                       style: TextStyle(fontStyle: FontStyle.italic)),
                 )
               else
-                ...vm.collectors.value.map((c) => CollectorCard(
-                      collector: c,
-                      isResearcher: vm.isResearcher,
-                      onViewDetails: () {
-                        HandlebarBottomSheet.show(
-                          context: context,
-                          child: CollectorDetailsBottomSheet(
-                            collector: c,
-                            isResearcher: vm.isResearcher,
-                          ),
-                        );
-                      },
-                      onDelete: () => _showConfirmationDialog(
-                        context: context,
-                        title: 'Delete Collector?',
-                        content:
-                            'This action cannot be undone. All data tied to this collector will be lost.',
-                        actionLabel: 'Delete',
-                        onConfirm: () => vm.deleteCollector(c.collectorId),
-                      ),
-                    )),
+                ..._buildCollectorsByApp(context, vm),
               Divider(height: Spacing.token48),
 
               const SectionHeader(title: 'Data Collected:'),
@@ -703,6 +684,74 @@ class _StudyScreenState extends State<StudyScreen> {
         },
       ),
     );
+  }
+
+  /// Renders the study's collectors grouped by app, each app in a collapsible
+  /// section so participants can expand an app to see what is being collected.
+  List<Widget> _buildCollectorsByApp(BuildContext context, StudyViewModel vm) {
+    final groups = groupCollectorsByApp(vm.collectors.value);
+    final scheme = Theme.of(context).colorScheme;
+
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+            Spacing.token16, 0, Spacing.token16, Spacing.token8),
+        child: Text(
+          groups.length == 1
+              ? 'This study collects data from 1 app.'
+              : 'This study collects data from ${groups.length} apps.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+      ),
+      ...groups.map((group) {
+        final count = group.collectors.length;
+        return Card(
+          margin: const EdgeInsets.only(bottom: Spacing.token8),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: scheme.outline),
+            borderRadius: BorderRadius.circular(Spacing.token8),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ExpansionTile(
+            leading: Icon(Icons.android, color: scheme.primary),
+            title: Text(
+              group.appName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(count == 1 ? '1 collector' : '$count collectors'),
+            childrenPadding: const EdgeInsets.fromLTRB(
+                Spacing.token8, 0, Spacing.token8, Spacing.token8),
+            children: group.collectors
+                .map((c) => CollectorCard(
+                      collector: c,
+                      isResearcher: vm.isResearcher,
+                      onViewDetails: () {
+                        HandlebarBottomSheet.show(
+                          context: context,
+                          child: CollectorDetailsBottomSheet(
+                            collector: c,
+                            isResearcher: vm.isResearcher,
+                          ),
+                        );
+                      },
+                      onDelete: () => _showConfirmationDialog(
+                        context: context,
+                        title: 'Delete Collector?',
+                        content:
+                            'This action cannot be undone. All data tied to this collector will be lost.',
+                        actionLabel: 'Delete',
+                        onConfirm: () => vm.deleteCollector(c.collectorId),
+                      ),
+                    ))
+                .toList(),
+          ),
+        );
+      }),
+    ];
   }
 
   void _showConfirmationDialog({

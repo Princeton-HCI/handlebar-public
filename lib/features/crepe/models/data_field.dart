@@ -6,10 +6,13 @@ class DataField {
   final int? dataFieldId;
   final String graphQuery;
   final String name;
+
   /// Entity the researcher tapped when defining this field (collector UI only).
   final int? sourceEntityId;
+
   /// Snapshot index in the recording where [sourceEntityId] was selected.
   final int? sourceSnapshotIndex;
+
   /// Text values captured when the field was defined (collector UI only).
   final CrepeEventValues? capturedValues;
 

@@ -37,6 +37,7 @@ class SnapshotOverlay extends StatelessWidget {
   final Map<String, List<int>>?
       testResults; // From testing a collector against this snapshot
   final Set<int> landmarkEntityIds;
+
   /// entityId → marker for data fields selected on this snapshot.
   final Map<int, SelectedFieldMarker> selectedFieldMarkers;
 

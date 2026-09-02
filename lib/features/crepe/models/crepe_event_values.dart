@@ -38,7 +38,8 @@ class CrepeEventValues {
         if (relationText != null) 'relationText': relationText,
         if (relationContentDescription != null)
           'relationContentDescription': relationContentDescription,
-        if (relationChildTexts != null) 'relationChildTexts': relationChildTexts,
+        if (relationChildTexts != null)
+          'relationChildTexts': relationChildTexts,
       };
 
   bool get isEmpty =>

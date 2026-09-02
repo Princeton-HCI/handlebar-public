@@ -298,6 +298,32 @@ class ResearchGroupDetailViewModel {
     });
   }
 
+  /// Updates a collector's name and/or collection frequency, then patches the
+  /// in-memory list with the server's response.
+  Future<bool> updateCollector(
+    int collectorId, {
+    String? description,
+    int? collectionIntervalSeconds,
+  }) async {
+    if (!isResearcher || _groupId == null) return false;
+
+    final res = await _rgCollectorRepo.updateCollector(
+      _groupId!,
+      collectorId,
+      description: description,
+      collectionIntervalSeconds: collectionIntervalSeconds,
+    );
+    return res.fold(onSuccess: (updated) {
+      collectors.value = collectors.value
+          .map((c) => c.collectorId == collectorId ? updated : c)
+          .toList();
+      return true;
+    }, onFailure: (ApiError e) {
+      errorMessage.value = e.message;
+      return false;
+    });
+  }
+
   // ================
   // CREPE EVENTS - GROUP FEED
   // ================

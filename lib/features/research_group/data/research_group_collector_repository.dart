@@ -82,6 +82,7 @@ class ResearchGroupCollectorRepository with ApiExecutor {
     required List<DataField> dataFields,
     List<String>? screenLandmarks,
     String? screenName,
+    int? collectionIntervalSeconds,
   }) async {
     final action = 'createCollectorAndAttach($groupId)';
     return executeRequest<Collector>(
@@ -99,6 +100,8 @@ class ResearchGroupCollectorRepository with ApiExecutor {
             if (screenName != null) 'screen_name': screenName,
             if (screenLandmarks != null && screenLandmarks.isNotEmpty)
               'screen_landmarks': screenLandmarks,
+            if (collectionIntervalSeconds != null)
+              'collection_interval_seconds': collectionIntervalSeconds,
             'data_fields': dfPayload,
           }
         };
@@ -111,6 +114,56 @@ class ResearchGroupCollectorRepository with ApiExecutor {
               Collector.fromJson(map['data'] as Map<String, dynamic>);
           _logger.info("$action successful");
           return Success(collector);
+        }
+
+        if (ApiClient.isUnauthorized(res)) {
+          return ApiClient.unauthorizedFailure(_logger, action: action);
+        }
+        if (ApiClient.isForbidden(res)) {
+          return ApiClient.forbiddenFailure(_logger, action: action);
+        }
+
+        return null;
+      },
+    );
+  }
+
+  /// Updates a collector's editable metadata (researcher only). Only the
+  /// provided fields are sent; omit a field to leave it unchanged.
+  Future<CollectorResult> updateCollector(
+    int groupId,
+    int collectorId, {
+    String? description,
+    int? collectionIntervalSeconds,
+  }) async {
+    final action = 'updateCollector($groupId, $collectorId)';
+    return executeRequest<Collector>(
+      action: action,
+      logger: _logger,
+      request: () {
+        final body = <String, dynamic>{
+          'collector': {
+            if (description != null) 'description': description,
+            if (collectionIntervalSeconds != null)
+              'collection_interval_seconds': collectionIntervalSeconds,
+          }
+        };
+        return _api.patch('$_base/$groupId/collectors/$collectorId',
+            body: body);
+      },
+      onResponse: (res) {
+        if (res.statusCode == 200) {
+          final map = jsonDecode(res.body) as Map<String, dynamic>;
+          final collector =
+              Collector.fromJson(map['data'] as Map<String, dynamic>);
+          _logger.info("$action successful");
+          return Success(collector);
+        }
+
+        if (res.statusCode == 404) {
+          const msg = 'Collector not found';
+          _logger.warning('$action failed - $msg');
+          return Failure(ApiError(message: msg, statusCode: 404));
         }
 
         if (ApiClient.isUnauthorized(res)) {

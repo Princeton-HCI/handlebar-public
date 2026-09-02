@@ -4,6 +4,7 @@ import 'package:handlebar/core/extensions/context_extensions.dart';
 import '../../../../../app/design-system/spacing.dart';
 import '../../../../crepe/models/collector.dart';
 import '../../../../crepe/models/participant_collector.dart';
+import '../../../../crepe/utils/collection_frequency.dart';
 import '../bottom-sheets/collector_details_bottom_sheet.dart';
 
 /// Tile for displaying a [Collector] in the research group UI
@@ -115,6 +116,29 @@ class CollectorTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+
+                  // Collection-frequency chip (only when not "every time")
+                  if ((collector.collectionIntervalSeconds ?? 0) > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.schedule,
+                            size: Spacing.token16, color: scheme.onSurface),
+                        Spacing.hSpace8,
+                        Flexible(
+                          child: Text(
+                            collectionFrequencyLabel(
+                                collector.collectionIntervalSeconds),
+                            style: context.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
 
                   // Conditional group name chip
                   if (groupName != null) ...[

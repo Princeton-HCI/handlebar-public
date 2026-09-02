@@ -738,10 +738,8 @@ class VideoSessionViewModel extends ChangeNotifier {
   ///
   /// Pass [relationsToExclude] to skip specific relation types during query
   /// generation (e.g., `['SCREEN_HAS_TEXT']`).
-  Future<List<SnapshotEntityQueries>> getQueriesForEntities(
-      Snapshot snapshot,
-      List<Map<String, dynamic>> hitEntities,
-      String datafieldDescription,
+  Future<List<SnapshotEntityQueries>> getQueriesForEntities(Snapshot snapshot,
+      List<Map<String, dynamic>> hitEntities, String datafieldDescription,
       {List<String>? relationsToExclude}) async {
     isCrepeQueryLoading.value = true;
 
@@ -813,6 +811,7 @@ class VideoSessionViewModel extends ChangeNotifier {
     required List<DataField> fields,
     List<String>? screenLandmarks,
     String? screenName,
+    int collectionIntervalSeconds = 0,
   }) async {
     if (snapshotIndex < 0 || snapshotIndex >= snapshots.length) {
       errorMessage.value = "Invalid snapshot index";
@@ -821,18 +820,9 @@ class VideoSessionViewModel extends ChangeNotifier {
 
     final snapshotMetadata = snapshots[snapshotIndex].metadata;
     final String appPackage = snapshotMetadata['packageName'] as String;
-    String? derivedAppName = snapshotMetadata['activityName'] as String?;
-
-    if (derivedAppName == null) {
-      final parts = appPackage.split('.');
-      if (parts.isNotEmpty) {
-        // Capitalize final part of the package name
-        derivedAppName =
-            "${parts.last[0].toUpperCase()}${parts.last.substring(1).toLowerCase()}";
-      } else {
-        derivedAppName = appPackage;
-      }
-    }
+    // Use the full package name as the app label (e.g. "com.doordash.driverapp").
+    // Last-segment guesses like "Driverapp" were unhelpful and often wrong.
+    final String derivedAppName = appPackage;
 
     final res = await _rgCollectorRepo.createCollectorAndAttach(
       groupId: groupId,
@@ -842,6 +832,8 @@ class VideoSessionViewModel extends ChangeNotifier {
       dataFields: fields,
       screenLandmarks: screenLandmarks,
       screenName: screenName,
+      collectionIntervalSeconds:
+          collectionIntervalSeconds > 0 ? collectionIntervalSeconds : null,
     );
 
     return res.fold(onSuccess: (newCollector) {
