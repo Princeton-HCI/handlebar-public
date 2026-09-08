@@ -6,6 +6,7 @@ import 'package:handlebar/features/settings/presentation/view_models/participant
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_membership_repository.dart';
 import 'package:handlebar/features/research_group/data/research_group_repository.dart';
+import 'package:handlebar/features/research_group/data/research_group_sensor_repository.dart';
 import 'package:handlebar/features/auth/presentation/view_models/create_study_view_model.dart';
 
 import '../core/network/api_client.dart';
@@ -18,10 +19,13 @@ import '../features/auth/presentation/view_models/login_viewmodel.dart';
 import '../features/auth/presentation/view_models/signup_viewmodel.dart';
 import '../features/crepe/data/snapshot_repository.dart';
 import '../features/crepe/presentation/view_models/accessibility_view_model.dart';
+import '../features/crepe/presentation/view_models/location_permission_view_model.dart';
 import '../features/crepe/services/crepe_service.dart';
+import '../features/crepe/services/location_permission_service.dart';
 import '../features/home/presentation/view_models/researcher_home_view_model.dart';
 import '../features/terms/data/terms_repository.dart';
 import '../features/crepe/data/crepe_event_repository.dart';
+import '../features/crepe/data/point_repository.dart';
 import '../features/terms/presentation/view_models/terms_view_model.dart';
 
 final getIt = GetIt.instance;
@@ -33,6 +37,8 @@ void setupLocator() {
   getIt.registerLazySingleton<SecureStorage>(() => SecureStorage());
   getIt.registerLazySingleton<DeviceInfoService>(() => DeviceInfoService());
   getIt.registerLazySingleton<CrepeService>(() => CrepeService());
+  getIt.registerLazySingleton<LocationPermissionService>(
+      () => LocationPermissionService());
   getIt.registerLazySingleton<CollectorService>(() => CollectorService());
 
   // AuthTokenStore requires SecureStorage
@@ -63,6 +69,8 @@ void setupLocator() {
         getIt<ApiClient>(),
         getIt<AuthTokenStore>(),
       ));
+  getIt.registerLazySingleton<PointRepository>(
+      () => PointRepository(getIt<ApiClient>()));
 
   getIt.registerLazySingleton<ResearchGroupRepository>(
       () => ResearchGroupRepository(getIt<ApiClient>()));
@@ -72,6 +80,9 @@ void setupLocator() {
 
   getIt.registerLazySingleton<ResearchGroupCollectorRepository>(
       () => ResearchGroupCollectorRepository(getIt<ApiClient>()));
+
+  getIt.registerLazySingleton<ResearchGroupSensorRepository>(
+      () => ResearchGroupSensorRepository(getIt<ApiClient>()));
 
   // ---------------------------------------------------------------------------
   // VIEWMODELS
@@ -101,11 +112,17 @@ void setupLocator() {
         crepeService: getIt(),
       ));
 
+  getIt.registerFactory(() => LocationPermissionViewModel(service: getIt()));
+
   getIt.registerFactory(() => ResearcherHomeViewModel(rgRepo: getIt()));
 
   getIt.registerFactory(() => CreateStudyViewModel(rgRepo: getIt()));
 
-  getIt.registerFactory(() => ParticipantHomeViewModel(rgRepo: getIt()));
+  getIt.registerFactory(() => ParticipantHomeViewModel(
+        rgRepo: getIt(),
+        sensorRepo: getIt(),
+        locationPermissions: getIt(),
+      ));
 
   getIt.registerFactory(() => ParticipantSettingsViewModel(
         getIt<SecureStorage>(),

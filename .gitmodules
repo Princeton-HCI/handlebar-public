@@ -1,3 +1,4 @@
 [submodule "crepe-flutter-plugin"]
 	path = crepe-flutter-plugin
 	url = https://github.com/Princeton-HCI/crepe-flutter-plugin.git
+	branch = dana/add-sensors-to-service

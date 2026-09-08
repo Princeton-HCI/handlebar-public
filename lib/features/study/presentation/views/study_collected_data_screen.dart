@@ -9,6 +9,7 @@ import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
 import '../../../research_group/presentation/widgets/cards/crepe_event_card.dart';
 import '../view_models/study_collected_data_view_model.dart';
+import '../widgets/location_point_tile.dart';
 
 /// Paginated feed of [CrepeEvent]s collected for a study.
 class StudyCollectedDataScreen extends StatefulWidget {
@@ -19,7 +20,10 @@ class StudyCollectedDataScreen extends StatefulWidget {
       _StudyCollectedDataScreenState();
 }
 
-class _StudyCollectedDataScreenState extends State<StudyCollectedDataScreen> {
+class _StudyCollectedDataScreenState extends State<StudyCollectedDataScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController =
+      TabController(length: 2, vsync: this);
   final _scrollController = ScrollController();
 
   @override
@@ -59,6 +63,102 @@ class _StudyCollectedDataScreenState extends State<StudyCollectedDataScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Screen and location data come from separate endpoints with
+          // separate cursors, so they are separate tabs rather than one
+          // interleaved timeline.
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.layers), text: 'Screen data'),
+              Tab(icon: Icon(Icons.place), text: 'Location'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildEventsTab(context, vm),
+                _buildPointsTab(context, vm),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPointsTab(
+      BuildContext context, StudyCollectedDataViewModel vm) {
+    return ValueListenableBuilder<List>(
+      valueListenable: vm.points,
+      builder: (context, points, _) {
+        if (points.isEmpty && vm.pointsErrorMessage.value != null) {
+          return PassiveErrorView(
+            message: 'Could not load location data.',
+            subtitle: vm.pointsErrorMessage.value,
+            onRetry: () => vm.refreshPoints(),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: vm.refreshPoints,
+          child: points.isEmpty && !vm.isLoadingPoints.value
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 80),
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(Spacing.token24),
+                        child: Text(
+                          'No location data collected yet.\n\nLocation is '
+                          'recorded only while a sensor trigger is active.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (n.metrics.pixels >=
+                        n.metrics.maxScrollExtent - 200) {
+                      vm.loadMorePoints();
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding:
+                        const EdgeInsets.only(bottom: Spacing.token16),
+                    itemCount: points.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == points.length) {
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: vm.isLoadingPoints,
+                          builder: (context, loading, _) => loading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(Spacing.token8),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                )
+                              : const SizedBox.shrink(),
+                        );
+                      }
+                      return LocationPointTile(point: points[index]);
+                    },
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEventsTab(
+      BuildContext context, StudyCollectedDataViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           ValueListenableBuilder<bool>(
             valueListenable: vm.isInitialized,
             builder: (context, isInit, _) {
@@ -127,8 +227,7 @@ class _StudyCollectedDataScreenState extends State<StudyCollectedDataScreen> {
               );
             },
           ),
-        ],
-      ),
+      ],
     );
   }
 }

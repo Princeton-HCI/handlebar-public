@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:crepe_plugin/crepe_plugin.dart';
+
+import '../models/sensor_health.dart';
 
 /// A safe wrapper around the native Crepe Android plugin.
 /// Stubbed out for Web to prevent MissingPluginExceptions on the WebApp.
@@ -48,6 +51,37 @@ class CrepeService {
     }
     return _plugin.setContinuousMonitoring(enabled,
         collectorsJson: collectorsJson);
+  }
+
+  Future<void> setSensorMonitoring(bool enabled, {String? sensorsJson}) async {
+    if (kIsWeb) {
+      _logger.info('[WEB STUB] setSensorMonitoring($enabled) ignored');
+      return;
+    }
+    return _plugin.setSensorMonitoring(enabled, sensorsJson: sensorsJson);
+  }
+
+  Future<void> setSensorSyncConfig(String? configJson) async {
+    if (kIsWeb) {
+      _logger.info('[WEB STUB] setSensorSyncConfig ignored');
+      return;
+    }
+    return _plugin.setSensorSyncConfig(configJson);
+  }
+
+  /// Device-local collection health, or null when unavailable (web, or the
+  /// accessibility service has never started).
+  Future<SensorHealth?> getSensorHealth() async {
+    if (kIsWeb) return null;
+    try {
+      final json = await _plugin.getSensorHealth();
+      if (json == null) return null;
+      return SensorHealth.fromJson(
+          jsonDecode(json) as Map<String, dynamic>);
+    } catch (e) {
+      _logger.warning('Could not read sensor health: $e');
+      return null;
+    }
   }
 
   Future<bool> isContinuousMonitoringEnabled() async {

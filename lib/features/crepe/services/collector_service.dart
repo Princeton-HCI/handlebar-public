@@ -7,11 +7,14 @@ import 'package:handlebar/features/crepe/models/collector_match.dart';
 import 'package:handlebar/features/crepe/models/match_result.dart';
 import 'package:handlebar/core/shared_services/notification_service.dart';
 import 'package:handlebar/features/research_group/data/research_group_collector_repository.dart';
+import 'package:handlebar/features/research_group/data/research_group_sensor_repository.dart';
 import '../../../app/app_locator.dart';
+import '../../../core/network/api_env_config.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/storage/auth_token_store.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../models/crepe_event.dart';
+import '../models/participant_sensor_config.dart';
 import 'crepe_service.dart';
 
 class CollectorService {
@@ -23,6 +26,7 @@ class CollectorService {
   final AuthTokenStore _authStore = getIt<AuthTokenStore>();
 
   ActiveCollectors? _activeCollectors;
+  List<ParticipantSensorConfig>? _activeSensors;
   bool _isInitialized = false;
 
   static void _showErrorToUser(String message) {
@@ -64,10 +68,18 @@ class CollectorService {
       _crepeService.setCollectorMatchesCallback(_handleContinuousMatches);
       final success = await fetchAndSetActiveCollectors();
 
+      // Sensors are fetched independently of collectors: a study may configure
+      // location without any screen collectors, and a collector fetch failure
+      // shouldn't silently disable sensors (or vice versa).
+      await fetchAndSetActiveSensors();
+
       if (success) {
         _isInitialized = true;
         await _enableContinuousMonitoring();
       }
+
+      await _enableSensorMonitoring();
+      await _pushSensorSyncConfig();
 
       return success;
     } catch (e) {
@@ -77,10 +89,42 @@ class CollectorService {
     }
   }
 
+  /// Hands the native uploader the endpoint and credentials for queued
+  /// samples.
+  ///
+  /// Pushed on every sync so a refreshed token reaches native promptly: the
+  /// uploader parks the queue on a 401 rather than retrying, and only a new
+  /// config restarts it.
+  Future<void> _pushSensorSyncConfig() async {
+    try {
+      final token = _authStore.token;
+      if (token == null) {
+        await _crepeService.setSensorSyncConfig(null);
+        return;
+      }
+
+      final config = jsonEncode({
+        'url': '${ApiEnvConfig.baseUrl}/api/research/points',
+        'headers': {'authorization': 'Bearer $token'},
+        // The points endpoint documents a 60-point cap per request.
+        'batchSize': 60,
+      });
+      await _crepeService.setSensorSyncConfig(config);
+    } catch (e) {
+      log('❌ [CollectorService] Failed to push sensor sync config: $e');
+    }
+  }
+
   Future<void> _stopContinuousMonitoring() async {
     _activeCollectors = null;
+    _activeSensors = null;
     _isInitialized = false;
     await _crepeService.setContinuousMonitoring(false);
+    await _crepeService.setSensorMonitoring(false);
+    // Clears the natively-stored bearer token. Queued samples are kept: they
+    // are still this participant's data and upload once a valid config
+    // returns.
+    await _crepeService.setSensorSyncConfig(null);
   }
 
   Future<void> _enableContinuousMonitoring() async {
@@ -170,6 +214,54 @@ class CollectorService {
     }
   }
 
+  Future<void> _enableSensorMonitoring() async {
+    final sensors = _activeSensors;
+    if (sensors == null) return;
+
+    try {
+      if (sensors.isEmpty) {
+        await _crepeService.setSensorMonitoring(false);
+        log('🟡 [CollectorService] No sensors configured; sensor monitoring OFF');
+        return;
+      }
+
+      final payload = jsonEncode({
+        'sensors': sensors.map((s) => s.toPluginFormat()).toList(),
+      });
+      await _crepeService.setSensorMonitoring(true, sensorsJson: payload);
+      log('🟢 [CollectorService] Sensor monitoring ENABLED (${sensors.length})');
+    } catch (e) {
+      log('❌ [CollectorService] Failed to enable sensor monitoring: $e');
+      _showErrorToUser('Failed to enable sensor monitoring: $e');
+    }
+  }
+
+  Future<bool> fetchAndSetActiveSensors() async {
+    try {
+      log('📡 [CollectorService] Getting active sensors from backend...');
+      final result =
+          await getIt<ResearchGroupSensorRepository>().listParticipantSensors();
+
+      return result.fold(
+        onSuccess: (sensors) {
+          // Dormant configs (collector_match whose collector was deleted) are
+          // dropped here so the native side never sees an unsatisfiable trigger.
+          _activeSensors =
+              sensors.where((s) => !s.sensor.isDormant).toList(growable: false);
+          return true;
+        },
+        onFailure: (ApiError error) {
+          log('❌ [CollectorService] Failed to get sensors: ${error.message}');
+          return false;
+        },
+      );
+    } catch (e) {
+      log('❌ [CollectorService] Error getting sensors: $e');
+      return false;
+    }
+  }
+
   ActiveCollectors? get activeCollectors => _activeCollectors;
+  List<ParticipantSensorConfig>? get activeSensors => _activeSensors;
   bool get isInitialized => _isInitialized;
 }

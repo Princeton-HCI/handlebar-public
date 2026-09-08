@@ -103,6 +103,10 @@ class _DeveloperMenuContent extends StatelessWidget {
     } else if (env == 'Staging') {
       ApiEnvConfig.useStaging();
       NotificationService().showSuccess('✅ Switched to Staging');
+    } else if (env == 'Local') {
+      ApiEnvConfig.useLocal();
+      NotificationService()
+          .showSuccess('✅ Switched to Local (${ApiEnvConfig.baseUrl})');
     }
   }
 
@@ -187,6 +191,20 @@ class _ApiEnvironmentPanel extends StatelessWidget {
             const SizedBox(height: 20),
             // Environment-switching buttons
             Row(children: [
+              // Switch to local button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => onSwitchTo('Local'),
+                  icon: const Icon(Icons.computer),
+                  label: const Text('Local'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        currentEnv == 'Local' ? Colors.blue : Colors.grey,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
               // Switch to prod button
               Expanded(
                 child: ElevatedButton.icon(

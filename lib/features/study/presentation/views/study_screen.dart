@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:handlebar/app/design-system/breakpoints.dart';
 import 'package:handlebar/core/extensions/context_extensions.dart';
+import 'package:handlebar/features/crepe/models/sensor_config.dart';
 import 'package:handlebar/features/crepe/utils/collector_grouping.dart';
 import 'package:handlebar/features/study/data/models/research_study.dart';
 import 'package:handlebar/features/study/presentation/view_models/study_view_model.dart';
@@ -21,9 +22,12 @@ import '../../../../core/shared_widgets/handlebar_text_field.dart';
 import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
 import '../../data/models/research_study_member.dart';
+import '../widgets/location_permission_banner.dart';
 import '../widgets/collector_card.dart';
 import '../widgets/member_card.dart';
 import '../widgets/section_header.dart';
+import '../widgets/sensor_card.dart';
+import '../widgets/sensor_config_dialog.dart';
 
 class StudyScreen extends StatefulWidget {
   const StudyScreen({super.key});
@@ -54,7 +58,8 @@ class _StudyScreenState extends State<StudyScreen> {
         vm.group,
         vm.myMembership,
         vm.members,
-        vm.collectors
+        vm.collectors,
+        vm.sensors,
       ]),
       builder: (context, _) {
         if (!vm.isInitialized.value) {
@@ -163,6 +168,11 @@ class _StudyScreenState extends State<StudyScreen> {
                 ),
                 Spacing.vSpace16,
               ],
+
+              LocationPermissionBanner(
+                sensors: vm.sensors.value,
+                isResearcher: vm.isResearcher,
+              ),
 
               if (vm.isResearcher) ...[
                 Align(
@@ -348,8 +358,12 @@ class _StudyScreenState extends State<StudyScreen> {
                           label: 'Create',
                           onPressed: kIsWeb
                               ? null
-                              : () => context.push(
-                                  '/studies/${vm.studyCode}/define-collector'),
+                              : () async {
+                                  await context.push(
+                                      '/studies/${vm.studyCode}/define-collector');
+                                  // Pick up any collector created in the flow.
+                                  await vm.refreshCollectors();
+                                },
                         ),
                         IconButton(
                           icon: const Icon(Icons.info_outline),
@@ -375,6 +389,61 @@ class _StudyScreenState extends State<StudyScreen> {
                 )
               else
                 ..._buildCollectorsByApp(context, vm),
+              Divider(height: Spacing.token48),
+
+              // ==============================
+              // SENSORS SECTION
+              // ==============================
+              SectionHeader(
+                title: 'Sensors:',
+                actions: vm.isResearcher
+                    ? [
+                        HandlebarButton.primary(
+                          label: 'Add',
+                          // One location sensor per study (backend unique index).
+                          onPressed: vm.sensors.value.any((s) => s.isLocation)
+                              ? null
+                              : () => _showAddSensorDialog(context, vm),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.info_outline),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const HandlebarInfoDialog(
+                                title: "Sensors Information",
+                                text:
+                                    "Sensors record device data (currently: location) on a participant's phone while a trigger is satisfied, such as a specific app being open or a Data Collector matching. Collection stops once the trigger has not been seen for the timeout you set. Participants must grant location permission for this to work, and each study can have one location sensor.",
+                              ),
+                            );
+                          },
+                        )
+                      ]
+                    : [],
+              ),
+              if (vm.sensors.value.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(left: Spacing.token16),
+                  child: Text("This study has no sensors, yet.",
+                      style: TextStyle(fontStyle: FontStyle.italic)),
+                )
+              else
+                ...vm.sensors.value.map((s) => SensorCard(
+                      sensor: s,
+                      collectors: vm.collectors.value,
+                      isResearcher: vm.isResearcher,
+                      onEdit: () => _showEditSensorDialog(context, vm, s),
+                      onToggleEnabled: () =>
+                          vm.setSensorEnabled(s.sensorId, !s.enabled),
+                      onDelete: () => _showConfirmationDialog(
+                        context: context,
+                        title: 'Delete Sensor?',
+                        content:
+                            'Participants will stop collecting this sensor the next time their device syncs. Data already collected is kept.',
+                        actionLabel: 'Delete',
+                        onConfirm: () => vm.deleteSensor(s.sensorId),
+                      ),
+                    )),
               Divider(height: Spacing.token48),
 
               const SectionHeader(title: 'Data Collected:'),
@@ -684,6 +753,36 @@ class _StudyScreenState extends State<StudyScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _showAddSensorDialog(
+      BuildContext context, StudyViewModel vm) async {
+    final draft = await showDialog<SensorConfigDraft>(
+      context: context,
+      builder: (_) => SensorConfigDialog(collectors: vm.collectors.value),
+    );
+    if (draft == null) return;
+    await vm.addSensor(
+      type: SensorConfig.typeLocation,
+      sampleIntervalSeconds: draft.sampleIntervalSeconds,
+      triggerType: draft.triggerType,
+      triggerAppPackage: draft.triggerAppPackage,
+      triggerCollectorId: draft.triggerCollectorId,
+      timeoutSeconds: draft.timeoutSeconds,
+    );
+  }
+
+  Future<void> _showEditSensorDialog(
+      BuildContext context, StudyViewModel vm, SensorConfig sensor) async {
+    final draft = await showDialog<SensorConfigDraft>(
+      context: context,
+      builder: (_) => SensorConfigDialog(
+        existing: sensor,
+        collectors: vm.collectors.value,
+      ),
+    );
+    if (draft == null) return;
+    await vm.updateSensor(sensor.sensorId, draft.diffAgainst(sensor));
   }
 
   /// Renders the study's collectors grouped by app, each app in a collapsible

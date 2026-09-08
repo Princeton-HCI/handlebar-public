@@ -37,16 +37,18 @@ class _CreateStudyScreenState extends State<CreateStudyScreen> {
 
     final vm = context.read<CreateStudyViewModel>();
 
-    final success = await vm.createStudy(
+    final study = await vm.createStudy(
       _nameController.text.trim(),
       _descController.text.trim(),
     );
 
     if (!mounted) return;
 
-    if (success) {
+    if (study != null) {
       NotificationService().showSuccess("Study successfully created");
-      context.pop(true);
+      // Hand the study back so the home screen can open its detail page,
+      // where collectors and sensors are configured.
+      context.pop(study);
     } else if (vm.errorMessage.value != null) {
       NotificationService().showError(vm.errorMessage.value!);
     }
@@ -135,7 +137,6 @@ class _CreateStudyScreenState extends State<CreateStudyScreen> {
                       return HandlebarButton.primary(
                         label: 'Create',
                         isLoading: isSubmitting,
-                        // TODO: If successful, take them straight to the detail view.
                         onPressed: _onSubmit,
                       );
                     },

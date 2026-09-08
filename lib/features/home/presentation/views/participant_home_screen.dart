@@ -49,6 +49,40 @@ class _ParticipantHomeScreenState extends State<ParticipantHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Shown on every visit, not just at join time: a participant who
+          // joined before the researcher added a location sensor would
+          // otherwise never be asked, and would silently collect nothing.
+          ValueListenableBuilder<bool>(
+            valueListenable: vm.needsLocationSetup,
+            builder: (context, needsSetup, _) {
+              if (!needsSetup) return const SizedBox.shrink();
+              final scheme = Theme.of(context).colorScheme;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.token16),
+                child: Card(
+                  elevation: 0,
+                  color: scheme.errorContainer,
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: scheme.error),
+                    borderRadius: BorderRadius.circular(Spacing.token8),
+                  ),
+                  child: ListTile(
+                    leading: Icon(Icons.location_off, color: scheme.error),
+                    title: const Text('Location access needed'),
+                    subtitle: const Text(
+                      'A study you joined collects location, but nothing is '
+                      'being recorded yet.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await context.push('/location-permission');
+                      await vm.refreshLocationSetupState();
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
           Expanded(
             child: ListenableBuilder(
               listenable:

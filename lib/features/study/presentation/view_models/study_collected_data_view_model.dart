@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../../../../app/app_locator.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../crepe/data/crepe_event_repository.dart';
+import '../../../crepe/data/point_repository.dart';
 import '../../../crepe/models/crepe_event.dart';
+import '../../../crepe/models/location_point.dart';
 import '../../../research_group/data/research_group_membership_repository.dart';
 import '../../../research_group/data/research_group_repository.dart';
 
@@ -14,6 +16,7 @@ class StudyCollectedDataViewModel {
   final _rgRepo = getIt<ResearchGroupRepository>();
   final _membershipRepo = getIt<ResearchGroupMembershipRepository>();
   final _crepeEventRepo = getIt<CrepeEventRepository>();
+  final _pointRepo = getIt<PointRepository>();
 
   StudyCollectedDataViewModel({required this.studyCode});
 
@@ -23,9 +26,17 @@ class StudyCollectedDataViewModel {
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
   final ValueNotifier<bool> hasMore = ValueNotifier(true);
 
+  // Location points page independently of screen events: separate endpoints,
+  // separate cursors, and a study may have one kind of data and not the other.
+  final ValueNotifier<List<LocationPoint>> points = ValueNotifier([]);
+  final ValueNotifier<bool> isLoadingPoints = ValueNotifier(false);
+  final ValueNotifier<bool> hasMorePoints = ValueNotifier(true);
+  final ValueNotifier<String?> pointsErrorMessage = ValueNotifier(null);
+
   int? _groupId;
   bool _isResearcher = false;
   String? _cursor;
+  String? _pointsCursor;
 
   bool get isResearcher => _isResearcher;
   int? get groupId => _groupId;
@@ -48,6 +59,9 @@ class StudyCollectedDataViewModel {
         );
         isInitialized.value = true;
         await refresh();
+        // Independent of events: a study may collect location and no screen
+        // data, so a failure in one must not hide the other.
+        await refreshPoints();
       },
       onFailure: (ApiError e) {
         errorMessage.value = e.message;
@@ -60,6 +74,52 @@ class StudyCollectedDataViewModel {
     _cursor = null;
     hasMore.value = true;
     await _fetch(clearList: true);
+  }
+
+  Future<void> refreshPoints() async {
+    _pointsCursor = null;
+    hasMorePoints.value = true;
+    await _fetchPoints(clearList: true);
+  }
+
+  Future<void> loadMorePoints() async {
+    if (!hasMorePoints.value || isLoadingPoints.value || _groupId == null) {
+      return;
+    }
+    await _fetchPoints(clearList: false);
+  }
+
+  Future<void> _fetchPoints({required bool clearList}) async {
+    if (_groupId == null) return;
+
+    isLoadingPoints.value = true;
+    pointsErrorMessage.value = null;
+    if (clearList) points.value = [];
+
+    final request = _isResearcher
+        ? _pointRepo.listResearcherPointsForGroup(
+            _groupId!,
+            cursor: _pointsCursor,
+            limit: 30,
+          )
+        : _pointRepo.listParticipantPoints(
+            groupId: _groupId,
+            cursor: _pointsCursor,
+            limit: 30,
+          );
+
+    final res = await request;
+    res.fold(
+      onSuccess: (page) {
+        points.value =
+            clearList ? page.items : [...points.value, ...page.items];
+        _pointsCursor = page.nextCursor;
+        hasMorePoints.value = page.hasNextPage;
+      },
+      onFailure: (ApiError e) => pointsErrorMessage.value = e.message,
+    );
+
+    isLoadingPoints.value = false;
   }
 
   Future<void> loadMore() async {
@@ -108,5 +168,9 @@ class StudyCollectedDataViewModel {
     events.dispose();
     isLoading.dispose();
     hasMore.dispose();
+    points.dispose();
+    isLoadingPoints.dispose();
+    hasMorePoints.dispose();
+    pointsErrorMessage.dispose();
   }
 }

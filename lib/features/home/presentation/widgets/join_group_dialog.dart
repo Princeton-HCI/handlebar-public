@@ -39,7 +39,17 @@ class _JoinGroupDialogState extends State<JoinGroupDialog> {
     if (!mounted) return;
 
     if (success) {
+      // Capture the router before popping: the dialog's own context is defunct
+      // afterwards, so it cannot be used to navigate.
+      final router = GoRouter.of(context);
+      final needsLocation = await widget.vm.needsLocationPermission();
+
+      if (!mounted) return;
       context.pop(); // Close dialog on success
+
+      // Prompt straight away if the study they just joined collects location.
+      // Nothing else asks, so skipping this means collecting nothing.
+      if (needsLocation) router.push('/location-permission');
     } else {
       // Re-enable the button if it failed (NotificationService handles the error UI)
       setState(() => _isSubmitting = false);

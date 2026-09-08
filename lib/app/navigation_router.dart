@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:handlebar/features/crepe/presentation/views/accessibility_screen.dart';
+import 'package:handlebar/features/crepe/presentation/views/location_permission_screen.dart';
 import 'package:handlebar/features/settings/presentation/view_models/participant_settings_view_model.dart';
 import 'package:handlebar/features/settings/presentation/views/participant_settings_screen.dart';
 import 'package:handlebar/features/researcher/presentation/view_models/collector_creation_view_model.dart';
@@ -20,6 +21,7 @@ import '../features/auth/presentation/view_models/signup_viewmodel.dart';
 import '../features/auth/presentation/views/login_screen.dart';
 import '../features/auth/presentation/views/signup_flow_screen.dart';
 import '../features/crepe/presentation/view_models/accessibility_view_model.dart';
+import '../features/crepe/presentation/view_models/location_permission_view_model.dart';
 import '../features/home/presentation/view_models/participant_home_view_model.dart';
 import '../features/home/presentation/view_models/researcher_home_view_model.dart';
 import '../features/home/presentation/views/participant_home_screen.dart';
@@ -184,6 +186,14 @@ final GoRouter navigationRouter = GoRouter(
             create: (_) => getIt<AccessibilityViewModel>(),
             dispose: (_, vm) => vm.dispose(),
             child: const AccessibilityScreen(isMandatory: true),
+          ),
+        ),
+        GoRoute(
+          path: '/location-permission',
+          builder: (context, state) => Provider(
+            create: (_) => getIt<LocationPermissionViewModel>(),
+            dispose: (_, vm) => vm.dispose(),
+            child: const LocationPermissionScreen(),
           ),
         ),
         GoRoute(

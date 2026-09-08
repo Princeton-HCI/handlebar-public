@@ -10,6 +10,7 @@ import '../../../../core/shared_widgets/handlebar_button.dart';
 import '../../../../core/shared_widgets/handlebar_layout.dart';
 import '../../../../core/shared_widgets/passive_error_view.dart';
 import '../../../../core/shared_widgets/safe_scaffold.dart';
+import '../../../study/data/models/research_study.dart';
 import '../view_models/researcher_home_view_model.dart';
 import '../widgets/study_card.dart';
 
@@ -126,9 +127,12 @@ class _ResearcherHomeScreenState extends State<ResearcherHomeScreen> {
               child: HandlebarButton.primary(
                 label: 'Create a Study',
                 onPressed: () async {
-                  final didCreate = await context.push('/create-study');
-                  if (didCreate == true && context.mounted) {
+                  final created = await context.push('/create-study');
+                  if (created is ResearchStudy && context.mounted) {
                     context.read<ResearcherHomeViewModel>().loadStudies();
+                    // Land on the new study so collectors and sensors can
+                    // be configured right away.
+                    context.push('/studies/${created.code}');
                   }
                 },
               ),
