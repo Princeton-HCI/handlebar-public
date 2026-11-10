@@ -34,12 +34,13 @@ The core research functionality of this system is the UI Snapshot Recording and 
 
 ### File Storage
 
-#### Recording Files Location
+Recordings get stored on-deivce:
+
 - **App Storage**: `[ExternalStorage]/Recordings/` (app's private external storage)
 - **File Format**: `handlebar_ui_snapshots_[timestamp].zip`
 - **Auto-save Files**: `handlebar_autosave_[timestamp].zip` (automatically cleaned up)
 
-#### File Structure
+#### Recording file structure
 ```
 handlebar_ui_snapshots_1234567890.zip
 ├── metadata.json           # Session metadata
@@ -94,22 +95,6 @@ The replay tool renders a primitive UI representation showing:
 3. Browse and select any `handlebar_ui_snapshots_*.zip` file
 4. The tool supports recordings from any device/session
 
-### Configuration Settings
-
-Recording preferences can be configured in the app:
-- **Capture Interval**: Time between snapshots (default: 1 second)
-- **Max Snapshots**: Maximum snapshots to keep in memory (default: 1000)
-- **Auto-save Interval**: Frequency of automatic backups (default: 10 seconds)
-
-### Use Cases for Researchers
-
-1. **User Behavior Analysis**: Capture complete interaction sessions for analysis
-2. **Cross-App Studies**: Record UI interactions across multiple Android applications
-3. **Accessibility Testing**: Analyze how UI elements are exposed to accessibility services
-4. **Synchronization with Screen Recording**: Timestamps allow sync with video recordings
-5. **Offline Analysis**: Export recordings for analysis on different devices
-6. **Longitudinal Studies**: Collect and compare UI interactions over time
-
 ### Technical Implementation
 
 The recording system consists of:
@@ -119,15 +104,8 @@ The recording system consists of:
 - **ReplayCrepeSnapshot**: Provides playback and visualization interface
 - **CREPE Plugin Integration**: Captures accessibility data via Android AccessibilityService
 
-### Best Practices
 
-1. **Enable Accessibility Service** before starting recording
-2. **Monitor storage space** - recordings can be large with many snapshots
-3. **Use auto-save** for long recording sessions to prevent data loss
-4. **Export immediately** after important recording sessions
-5. **Test replay** on target analysis device before large-scale data collection
-
-## Repository Structure
+## Repo Structure
 
 ```
 dsc-app-and-plugin/
@@ -370,51 +348,6 @@ class CollectorService {
 }
 ```
 
-### Method Channel Communication
-
-The plugin uses Flutter's method channel for bidirectional communication:
-
-**App → Plugin** (Method Invocations):
-- `initializeGraphQuery`
-- `updateSnapshot`
-- `matchCollectorData`
-- `setContinuousMonitoring`
-
-**Plugin → App** (Callbacks):
-- `onCollectorMatches` - Notifies app when UI matches are found
-
-## Development Workflow
-
-### Making Changes
-
-1. **Plugin Changes**:
-   - Edit files in `crepe-flutter-plugin/`
-   - Test changes locally
-   - Commit and push to plugin repository
-   - Update submodule reference in app repository
-
-2. **App Changes**:
-   - Edit files in `flutter-crepe-integration/`
-   - Test integration with plugin
-   - Commit changes to app repository
-
-### Testing Integration
-
-1. Ensure accessibility service is enabled on test device
-2. Run the app: `flutter run`
-3. Plugin functionality is automatically available through local path dependency
-4. Test collector matching and event submission
-
-## Important Notes
-
-### SSH Access Requirement
-For local development, SSH keys must be configured with GitHub access to the Princeton-HCI organization repository to clone and update the plugin submodule.
-
-### Platform Support
-Currently, the plugin only supports Android. The accessibility service integration is Android-specific and relies on Android's AccessibilityService API.
-
-### Permissions
-The app must guide users to enable the accessibility service in system settings. The plugin provides methods to check status and open settings, but cannot programmatically enable the service.
 
 ## Summary
 
